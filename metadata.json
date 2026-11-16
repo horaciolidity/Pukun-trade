@@ -1,0 +1,6 @@
+{
+  "name": "CRYPTO AI EXCHANGE",
+  "description": "Plataforma integral de trading de criptomonedas, futuros hasta 125x, bots algorítmicos, inteligencia de mercado con IA, Quick Trading, Wallet multi-red y Token Factory con entorno DEMO y REAL separados.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
