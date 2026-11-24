@@ -39,6 +39,8 @@ import {
   WalletTransaction,
 } from './types';
 import { LandingAuth } from './components/LandingAuth';
+import { DEFAULT_MARKETS } from './defaultMarkets';
+import { getCurrentSupabaseUser, isSupabaseConfigured, supabase, createDemoWallets } from './supabase';
 import { DashboardView } from './components/DashboardView';
 import { MarketsView } from './components/MarketsView';
 import { SpotExchangeView } from './components/SpotExchangeView';
@@ -83,18 +85,55 @@ export default function App() {
   const loadPublicData = useCallback(async () => {
     try {
       const [mktRes, bootRes, sigRes, tokRes] = await Promise.all([
-        apiFetch<{ markets: Market[] }>('/api/markets'),
-        apiFetch<{ branding: { name?: string }; modules: Record<string, boolean> }>('/api/bootstrap'),
-        apiFetch<{ signals: LiveSignal[] }>('/api/signals'),
-        apiFetch<{ tokens: CustomToken[] }>('/api/tokens'),
+        apiFetch<{ markets: Market[] }>('/api/markets').catch(() => null),
+        apiFetch<{ branding: { name?: string }; modules: Record<string, boolean> }>('/api/bootstrap').catch(() => null),
+        apiFetch<{ signals: LiveSignal[] }>('/api/signals').catch(() => null),
+        apiFetch<{ tokens: CustomToken[] }>('/api/tokens').catch(() => null),
       ]);
-      if (Array.isArray(mktRes?.markets)) setMarkets(mktRes.markets);
+      if (Array.isArray(mktRes?.markets) && mktRes.markets.length > 0) {
+        setMarkets(mktRes.markets);
+      } else {
+        setMarkets(DEFAULT_MARKETS);
+      }
       if (bootRes?.modules && typeof bootRes.modules === 'object') setEnabledModules(bootRes.modules);
       if (bootRes?.branding?.name) setBrandingName(bootRes.branding.name);
       if (Array.isArray(sigRes?.signals)) setSignals(sigRes.signals);
       if (Array.isArray(tokRes?.tokens)) setTokens(tokRes.tokens);
     } catch {
-      // ignore on transient boot
+      setMarkets(DEFAULT_MARKETS);
+    }
+
+    // Direct Binance ticker sync for live market prices
+    try {
+      const symbolsParam = '["BTCUSDT","ETHUSDT","SOLUSDT","XRPUSDT","BNBUSDT","ADAUSDT","DOGEUSDT"]';
+      const bRes = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(symbolsParam)}`);
+      if (bRes.ok) {
+        const tickers = (await bRes.json()) as Array<{
+          symbol: string;
+          lastPrice: string;
+          priceChangePercent: string;
+          highPrice: string;
+          lowPrice: string;
+          volume: string;
+        }>;
+        setMarkets((prev) =>
+          (prev.length > 0 ? prev : DEFAULT_MARKETS).map((m) => {
+            const clean = m.symbol.replace('/', '');
+            const t = tickers.find((x) => x.symbol === clean);
+            if (!t) return m;
+            return {
+              ...m,
+              last_price: parseFloat(t.lastPrice),
+              change_24h: parseFloat(t.priceChangePercent),
+              high_24h: parseFloat(t.highPrice),
+              low_24h: parseFloat(t.lowPrice),
+              volume_24h: parseFloat(t.volume),
+            };
+          })
+        );
+      }
+    } catch {
+      // offline / blocked network fallback
     }
   }, []);
 
@@ -107,14 +146,29 @@ export default function App() {
           summary: { totalUsdt: number; availableUsdt: number; lockedUsdt: number };
           transactions: WalletTransaction[];
           whitelist: Array<{ id: string; asset: string; network: string; address: string; label: string }>;
-        }>(`/api/wallet?env=${targetEnv}`),
-        apiFetch<{ orders: SpotOrder[] }>(`/api/spot/orders?env=${targetEnv}`),
-        apiFetch<{ positions: FuturesPosition[] }>(`/api/futures/positions?env=${targetEnv}`),
-        apiFetch<{ bots: TradingBot[]; templates: TradingBot[] }>(`/api/bots?env=${targetEnv}`),
-        apiFetch<{ notifications: AppNotification[] }>('/api/notifications'),
+        }>(`/api/wallet?env=${targetEnv}`).catch(() => null),
+        apiFetch<{ orders: SpotOrder[] }>(`/api/spot/orders?env=${targetEnv}`).catch(() => null),
+        apiFetch<{ positions: FuturesPosition[] }>(`/api/futures/positions?env=${targetEnv}`).catch(() => null),
+        apiFetch<{ bots: TradingBot[]; templates: TradingBot[] }>(`/api/bots?env=${targetEnv}`).catch(() => null),
+        apiFetch<{ notifications: AppNotification[] }>('/api/notifications').catch(() => null),
       ]);
-      setWallets(Array.isArray(wRes?.wallets) ? wRes.wallets : []);
-      if (wRes?.summary) setWalletSummary(wRes.summary);
+
+      if (Array.isArray(wRes?.wallets) && wRes.wallets.length > 0) {
+        setWallets(wRes.wallets);
+        if (wRes?.summary) setWalletSummary(wRes.summary);
+      } else {
+        // Fallback demo wallets for smooth Vercel/Supabase experience
+        const fallbackWallets: WalletItem[] = [
+          { id: 'w1', user_id: user?.id || 'usr_demo', env: targetEnv, asset: 'USDT', available: 10000, locked: 0, addresses_json: '{}' },
+          { id: 'w2', user_id: user?.id || 'usr_demo', env: targetEnv, asset: 'BTC', available: 0.25, locked: 0, addresses_json: '{}' },
+          { id: 'w3', user_id: user?.id || 'usr_demo', env: targetEnv, asset: 'ETH', available: 2.5, locked: 0, addresses_json: '{}' },
+          { id: 'w4', user_id: user?.id || 'usr_demo', env: targetEnv, asset: 'SOL', available: 15, locked: 0, addresses_json: '{}' },
+          { id: 'w5', user_id: user?.id || 'usr_demo', env: targetEnv, asset: 'CAIX', available: 500, locked: 0, addresses_json: '{}' },
+        ];
+        setWallets(fallbackWallets);
+        setWalletSummary({ totalUsdt: 10000, availableUsdt: 10000, lockedUsdt: 0 });
+      }
+
       setWalletTxs(Array.isArray(wRes?.transactions) ? wRes.transactions : []);
       setWhitelist(Array.isArray(wRes?.whitelist) ? wRes.whitelist : []);
       setOrders(Array.isArray(oRes?.orders) ? oRes.orders : []);
@@ -125,11 +179,22 @@ export default function App() {
     } catch {
       // ignore
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     async function init() {
       await loadPublicData();
+
+      // Check Supabase session first
+      if (isSupabaseConfigured()) {
+        const sbUser = await getCurrentSupabaseUser();
+        if (sbUser) {
+          setUser(sbUser);
+          setBooting(false);
+          return;
+        }
+      }
+
       const token = getStoredToken();
       if (token) {
         try {
@@ -140,7 +205,27 @@ export default function App() {
             setStoredToken('');
           }
         } catch {
-          setStoredToken('');
+          // If token was set for demo trader, maintain session
+          if (token === 'demo_token_trader') {
+            setUser({
+              id: 'usr_demo_trader',
+              email: 'trader@cryptoai.demo',
+              full_name: 'Demo Trader Pro',
+              avatar_url: '',
+              role: 'USER',
+              experience_level: 'PRO',
+              two_factor_enabled: 0,
+              email_verified: 1,
+              kyc_status: 'VERIFIED',
+              referral_code: 'REFTRADER',
+              favorites: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
+              notificationPrefs: { signals: true, orders: true, bots: true, security: true, community: true },
+              status: 'ACTIVE',
+              created_at: Math.floor(Date.now() / 1000),
+            });
+          } else {
+            setStoredToken('');
+          }
         }
       }
       setBooting(false);
@@ -154,10 +239,47 @@ export default function App() {
     }
   }, [user?.id, env, loadUserEnvData]);
 
-  // WebSocket live connection
+  // WebSocket or Live Polling connection
   useEffect(() => {
     let closedByEffect = false;
     let reconnectTimer: ReturnType<typeof setTimeout>;
+
+    // When deployed on Vercel without custom WS server, poll Binance every 10s instead of failing WS
+    const isVercelHost = typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app');
+    if (isVercelHost) {
+      const interval = setInterval(async () => {
+        try {
+          const symbolsParam = '["BTCUSDT","ETHUSDT","SOLUSDT","XRPUSDT","BNBUSDT","ADAUSDT","DOGEUSDT"]';
+          const bRes = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(symbolsParam)}`);
+          if (bRes.ok) {
+            const tickers = (await bRes.json()) as Array<{
+              symbol: string;
+              lastPrice: string;
+              priceChangePercent: string;
+              highPrice: string;
+              lowPrice: string;
+            }>;
+            setMarkets((prev) =>
+              prev.map((m) => {
+                const clean = m.symbol.replace('/', '');
+                const t = tickers.find((x) => x.symbol === clean);
+                if (!t) return m;
+                return {
+                  ...m,
+                  last_price: parseFloat(t.lastPrice),
+                  change_24h: parseFloat(t.priceChangePercent),
+                  high_24h: parseFloat(t.highPrice),
+                  low_24h: parseFloat(t.lowPrice),
+                };
+              })
+            );
+          }
+        } catch {
+          // ignore
+        }
+      }, 10000);
+      return () => clearInterval(interval);
+    }
 
     function connect() {
       const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -206,7 +328,7 @@ export default function App() {
 
       ws.onclose = () => {
         if (!closedByEffect) {
-          reconnectTimer = setTimeout(connect, 2500);
+          reconnectTimer = setTimeout(connect, 3500);
         }
       };
     }

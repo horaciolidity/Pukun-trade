@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ShieldCheck, ArrowRight, Bot, Cpu, Layers, TrendingUp, Lock, KeyRound } from 'lucide-react';
 import { apiFetch, formatPrice, setStoredToken } from '../api';
 import { Market, UserProfile } from '../types';
+import { isSupabaseConfigured, signUpWithSupabase, signInWithSupabase, supabase } from '../supabase';
 
 interface Props {
   markets: Market[];
@@ -28,35 +29,53 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
     setLoading(true);
     try {
       if (authMode === 'forgot') {
-        const res = await apiFetch<{ message: string }>('/api/auth/forgot-password', {
-          method: 'POST',
-          body: JSON.stringify({ email }),
-        });
-        setInfoMsg(res.message);
+        if (isSupabaseConfigured()) {
+          const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email);
+          if (resetErr) throw new Error(resetErr.message);
+          setInfoMsg('Te hemos enviado un correo con instrucciones para restablecer tu contraseña.');
+        } else {
+          const res = await apiFetch<{ message: string }>('/api/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+          });
+          setInfoMsg(res.message);
+        }
       } else if (authMode === 'register') {
-        const res = await apiFetch<{ token: string; user: UserProfile }>('/api/auth/register', {
-          method: 'POST',
-          body: JSON.stringify({ email, password, fullName, referralCode }),
-        });
-        setStoredToken(res.token);
-        onAuthenticated(res.user);
-      } else {
-        const res = await apiFetch<{
-          token?: string;
-          user?: UserProfile;
-          requires2FA?: boolean;
-          tempHint?: string;
-        }>('/api/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password, twoFactorCode: needs2FA ? twoFactorCode : undefined }),
-        });
-        if (res.requires2FA) {
-          setNeeds2FA(true);
-          setHint2FA(res.tempHint || '');
-          setInfoMsg('Ingresa el código 2FA de verificación para completar el acceso.');
-        } else if (res.token && res.user) {
+        if (isSupabaseConfigured()) {
+          const { user, sessionToken } = await signUpWithSupabase(email, password, fullName, referralCode);
+          setStoredToken(sessionToken);
+          onAuthenticated(user);
+        } else {
+          const res = await apiFetch<{ token: string; user: UserProfile }>('/api/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ email, password, fullName, referralCode }),
+          });
           setStoredToken(res.token);
           onAuthenticated(res.user);
+        }
+      } else {
+        if (isSupabaseConfigured()) {
+          const { user, sessionToken } = await signInWithSupabase(email, password);
+          setStoredToken(sessionToken);
+          onAuthenticated(user);
+        } else {
+          const res = await apiFetch<{
+            token?: string;
+            user?: UserProfile;
+            requires2FA?: boolean;
+            tempHint?: string;
+          }>('/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password, twoFactorCode: needs2FA ? twoFactorCode : undefined }),
+          });
+          if (res.requires2FA) {
+            setNeeds2FA(true);
+            setHint2FA(res.tempHint || '');
+            setInfoMsg('Ingresa el código 2FA de verificación para completar el acceso.');
+          } else if (res.token && res.user) {
+            setStoredToken(res.token);
+            onAuthenticated(res.user);
+          }
         }
       }
     } catch (err) {
@@ -70,12 +89,34 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
     setError('');
     setLoading(true);
     try {
-      const res = await apiFetch<{ token: string; user: UserProfile }>('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email: presetEmail, password: presetPass }),
-      });
-      setStoredToken(res.token);
-      onAuthenticated(res.user);
+      if (isSupabaseConfigured()) {
+        try {
+          const res = await signInWithSupabase(presetEmail, presetPass);
+          setStoredToken(res.sessionToken);
+          onAuthenticated(res.user);
+          return;
+        } catch {
+          // If demo user is not yet created in Supabase, fall through to instant demo profile
+        }
+      }
+      const demoUser: UserProfile = {
+        id: 'usr_demo_trader',
+        email: presetEmail,
+        full_name: 'Demo Trader Pro',
+        avatar_url: '',
+        role: 'USER',
+        experience_level: 'PRO',
+        two_factor_enabled: 0,
+        email_verified: 1,
+        kyc_status: 'VERIFIED',
+        referral_code: 'REFTRADER',
+        favorites: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
+        notificationPrefs: { signals: true, orders: true, bots: true, security: true, community: true },
+        status: 'ACTIVE',
+        created_at: Math.floor(Date.now() / 1000),
+      };
+      setStoredToken('demo_token_trader');
+      onAuthenticated(demoUser);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión DEMO');
     } finally {
