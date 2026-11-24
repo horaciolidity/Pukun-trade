@@ -175,3 +175,4 @@ export async function getCurrentSupabaseUser(): Promise<UserProfile | null> {
     return null;
   }
 }
+

@@ -1,4 +1,4 @@
-import { Market } from '../types';
+import { Market } from './types';
 
 export const DEFAULT_MARKETS: Market[] = [
   {
@@ -21,6 +21,11 @@ export const DEFAULT_MARKETS: Market[] = [
     futures_enabled: 1,
     max_leverage: 125,
     funding_rate: 0.0001,
+    open_interest: 645820000,
+    is_custom_token: 0,
+    liquidity_usdt: 28000000,
+    price_source: 'BINANCE_PUBLIC',
+    active: 1,
   },
   {
     symbol: 'ETH/USDT',
@@ -42,6 +47,11 @@ export const DEFAULT_MARKETS: Market[] = [
     futures_enabled: 1,
     max_leverage: 100,
     funding_rate: 0.0001,
+    open_interest: 319340000,
+    is_custom_token: 0,
+    liquidity_usdt: 28000000,
+    price_source: 'BINANCE_PUBLIC',
+    active: 1,
   },
   {
     symbol: 'SOL/USDT',
@@ -63,6 +73,11 @@ export const DEFAULT_MARKETS: Market[] = [
     futures_enabled: 1,
     max_leverage: 75,
     funding_rate: 0.0001,
+    open_interest: 189280000,
+    is_custom_token: 0,
+    liquidity_usdt: 28000000,
+    price_source: 'BINANCE_PUBLIC',
+    active: 1,
   },
   {
     symbol: 'XRP/USDT',
@@ -84,6 +99,11 @@ export const DEFAULT_MARKETS: Market[] = [
     futures_enabled: 1,
     max_leverage: 50,
     funding_rate: 0.0001,
+    open_interest: 146615000,
+    is_custom_token: 0,
+    liquidity_usdt: 28000000,
+    price_source: 'BINANCE_PUBLIC',
+    active: 1,
   },
   {
     symbol: 'BNB/USDT',
@@ -105,6 +125,11 @@ export const DEFAULT_MARKETS: Market[] = [
     futures_enabled: 1,
     max_leverage: 75,
     funding_rate: 0.0001,
+    open_interest: 101150000,
+    is_custom_token: 0,
+    liquidity_usdt: 28000000,
+    price_source: 'BINANCE_PUBLIC',
+    active: 1,
   },
   {
     symbol: 'ADA/USDT',
@@ -126,6 +151,11 @@ export const DEFAULT_MARKETS: Market[] = [
     futures_enabled: 1,
     max_leverage: 50,
     funding_rate: 0.0001,
+    open_interest: 61460000,
+    is_custom_token: 0,
+    liquidity_usdt: 28000000,
+    price_source: 'BINANCE_PUBLIC',
+    active: 1,
   },
   {
     symbol: 'DOGE/USDT',
@@ -147,6 +177,11 @@ export const DEFAULT_MARKETS: Market[] = [
     futures_enabled: 1,
     max_leverage: 50,
     funding_rate: 0.0001,
+    open_interest: 127890000,
+    is_custom_token: 0,
+    liquidity_usdt: 28000000,
+    price_source: 'BINANCE_PUBLIC',
+    active: 1,
   },
   {
     symbol: 'CAIX/USDT',
@@ -168,5 +203,10 @@ export const DEFAULT_MARKETS: Market[] = [
     futures_enabled: 0,
     max_leverage: 1,
     funding_rate: 0,
+    open_interest: 0,
+    is_custom_token: 1,
+    liquidity_usdt: 1850000,
+    price_source: 'INTERNAL_AMM_DEMO',
+    active: 1,
   },
 ];

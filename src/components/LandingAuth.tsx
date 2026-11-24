@@ -234,9 +234,8 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
                     setError('');
                     setNeeds2FA(false);
                   }}
-                  className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                    authMode === 'login' ? 'bg-[#1A2133] text-white' : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors cursor-pointer ${authMode === 'login' ? 'bg-[#1A2133] text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   Iniciar Sesión
                 </button>
@@ -247,9 +246,8 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
                     setError('');
                     setNeeds2FA(false);
                   }}
-                  className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                    authMode === 'register' ? 'bg-[#1A2133] text-white' : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors cursor-pointer ${authMode === 'register' ? 'bg-[#1A2133] text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   Crear Cuenta
                 </button>
@@ -345,10 +343,10 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
                   {loading
                     ? 'Procesando...'
                     : authMode === 'login'
-                    ? 'Acceder al Exchange'
-                    : authMode === 'register'
-                    ? 'Registrar cuenta con 10.000 USDT DEMO'
-                    : 'Enviar enlace de recuperación'}
+                      ? 'Acceder al Exchange'
+                      : authMode === 'register'
+                        ? 'Registrar cuenta con 10.000 USDT DEMO'
+                        : 'Enviar enlace de recuperación'}
                 </button>
               </form>
 

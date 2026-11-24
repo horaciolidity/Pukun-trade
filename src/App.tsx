@@ -159,11 +159,11 @@ export default function App() {
       } else {
         // Fallback demo wallets for smooth Vercel/Supabase experience
         const fallbackWallets: WalletItem[] = [
-          { id: 'w1', user_id: user?.id || 'usr_demo', env: targetEnv, asset: 'USDT', available: 10000, locked: 0, addresses_json: '{}' },
-          { id: 'w2', user_id: user?.id || 'usr_demo', env: targetEnv, asset: 'BTC', available: 0.25, locked: 0, addresses_json: '{}' },
-          { id: 'w3', user_id: user?.id || 'usr_demo', env: targetEnv, asset: 'ETH', available: 2.5, locked: 0, addresses_json: '{}' },
-          { id: 'w4', user_id: user?.id || 'usr_demo', env: targetEnv, asset: 'SOL', available: 15, locked: 0, addresses_json: '{}' },
-          { id: 'w5', user_id: user?.id || 'usr_demo', env: targetEnv, asset: 'CAIX', available: 500, locked: 0, addresses_json: '{}' },
+          { asset: 'USDT', available: 10000, locked: 0, usdPrice: 1, usdValue: 10000, addresses: {} },
+          { asset: 'BTC', available: 0.25, locked: 0, usdPrice: 91450, usdValue: 22862.5, addresses: {} },
+          { asset: 'ETH', available: 2.5, locked: 0, usdPrice: 3240, usdValue: 8100, addresses: {} },
+          { asset: 'SOL', available: 15, locked: 0, usdPrice: 214, usdValue: 3210, addresses: {} },
+          { asset: 'CAIX', available: 500, locked: 0, usdPrice: 1.45, usdValue: 725, addresses: {} },
         ];
         setWallets(fallbackWallets);
         setWalletSummary({ totalUsdt: 10000, availableUsdt: 10000, lockedUsdt: 0 });
