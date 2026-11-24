@@ -522,7 +522,7 @@ export default function App() {
                 >
                   <Bell className="h-4 w-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-blue-600 text-[10px] font-bold text-white flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-blue-600 text-[10px] font-bold text-white flex items-center justify-center">
                       {unreadCount}
                     </span>
                   )}
@@ -560,7 +560,7 @@ export default function App() {
                 <span className="h-5 w-5 rounded-full bg-blue-600 text-[10px] font-bold flex items-center justify-center text-white">
                   {user.full_name.slice(0, 1).toUpperCase()}
                 </span>
-                <span className="max-w-[100px] truncate">{user.full_name.split(' ')[0]}</span>
+                <span className="max-w-25 truncate">{user.full_name.split(' ')[0]}</span>
               </button>
             </div>
           </div>
@@ -580,7 +580,7 @@ export default function App() {
         </header>
 
         {/* Workspace Viewport */}
-        <main className="flex-1 p-3 sm:p-6 pb-24 lg:pb-8 max-w-[1440px] w-full mx-auto">
+        <main className="flex-1 p-3 sm:p-6 pb-24 lg:pb-8 max-w-360 w-full mx-auto">
           {activeTab === 'dashboard' && (
             <DashboardView
               env={env}
@@ -720,7 +720,7 @@ export default function App() {
                 key={tab.id}
                 type="button"
                 onClick={() => handleNavigate(tab.id)}
-                className={`flex flex-col items-center justify-center min-h-[44px] cursor-pointer ${
+                className={`flex flex-col items-center justify-center min-h-11 cursor-pointer ${
                   active ? 'text-blue-400' : 'text-slate-400'
                 }`}
               >
@@ -732,7 +732,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setMoreSheetOpen(true)}
-            className="flex flex-col items-center justify-center min-h-[44px] text-slate-400 cursor-pointer"
+            className="flex flex-col items-center justify-center min-h-11 text-slate-400 cursor-pointer"
           >
             <Menu className="h-5 w-5" />
             <span className="text-[10px] font-medium mt-0.5">MÁS</span>
@@ -763,7 +763,7 @@ export default function App() {
                     key={item.id}
                     type="button"
                     onClick={() => handleNavigate(item.id)}
-                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-center min-h-[72px] cursor-pointer ${
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-center min-h-18 cursor-pointer ${
                       activeTab === item.id
                         ? 'border-blue-500 bg-blue-600/20 text-white'
                         : 'border-white/8 bg-[#090B10] text-slate-300'
