@@ -294,6 +294,47 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
     let pingTimer: ReturnType<typeof setInterval> | null = null;
     let closedByCleanup = false;
 
+    const isVercelHost = typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app');
+    if (isVercelHost) {
+      setWsStatus('CONNECTED');
+      setLastTickReceivedAt(Date.now());
+      const pollBinanceTick = async () => {
+        if (closedByCleanup) return;
+        const t0 = performance.now();
+        try {
+          const sym = selectedSymRef.current || 'BTC/USDT';
+          const cleanSym = sym.replace('/', '');
+          const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(cleanSym)}`);
+          if (res.ok && !closedByCleanup) {
+            const d = (await res.json()) as {
+              lastPrice: string;
+              priceChangePercent: string;
+              highPrice: string;
+              lowPrice: string;
+            };
+            const lp = parseFloat(d.lastPrice);
+            setLatencyMs(Math.max(1, Math.round(performance.now() - t0)));
+            setLastTickReceivedAt(Date.now());
+            setLiveMarketPatch({
+              last_price: lp,
+              change_24h: parseFloat(d.priceChangePercent),
+              high_24h: parseFloat(d.highPrice),
+              low_24h: parseFloat(d.lowPrice),
+              price_source: 'BINANCE_LIVE',
+            });
+          }
+        } catch {
+          // ignore transient fetch errors
+        }
+      };
+      pollBinanceTick();
+      const pollTimer = setInterval(pollBinanceTick, 2500);
+      return () => {
+        closedByCleanup = true;
+        clearInterval(pollTimer);
+      };
+    }
+
     const measureRestLatency = async () => {
       const t0 = performance.now();
       try {
@@ -359,10 +400,10 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
               const updated = prev.map((item) =>
                 item.id === p.id
                   ? {
-                      ...item,
-                      max_positive_pnl: p.maxPositivePnl ?? item.max_positive_pnl,
-                      max_negative_pnl: p.maxNegativePnl ?? item.max_negative_pnl,
-                    }
+                    ...item,
+                    max_positive_pnl: p.maxPositivePnl ?? item.max_positive_pnl,
+                    max_negative_pnl: p.maxNegativePnl ?? item.max_negative_pnl,
+                  }
                   : item
               );
               historyRef.current = updated;
@@ -389,12 +430,12 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                 prev
                   ? { ...prev, last_price: p.close_price }
                   : {
-                      last_price: p.close_price,
-                      high_24h: p.close_price,
-                      low_24h: p.close_price,
-                      change_24h: 0,
-                      price_source: existing?.price_source || 'SIMULATED_FEED',
-                    }
+                    last_price: p.close_price,
+                    high_24h: p.close_price,
+                    low_24h: p.close_price,
+                    change_24h: 0,
+                    price_source: existing?.price_source || 'SIMULATED_FEED',
+                  }
               );
               pushQuoteTickRef.current(p.close_price);
             }
@@ -501,7 +542,7 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
         .then((res) => {
           if (res.indicators) setIndicators(res.indicators);
         })
-        .catch(() => {});
+        .catch(() => { });
     }, 15000);
     return () => clearInterval(id);
   }, [currentMarket?.symbol]);
@@ -740,27 +781,25 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
 
         <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono">
           <span
-            className={`font-semibold ${
-              env === 'DEMO' ? 'text-amber-300' : isLivePublicSource ? 'text-emerald-400' : 'text-amber-300'
-            }`}
+            className={`font-semibold ${env === 'DEMO' ? 'text-amber-300' : isLivePublicSource ? 'text-emerald-400' : 'text-amber-300'
+              }`}
           >
             {env === 'DEMO'
               ? isLivePublicSource
                 ? 'DEMO · COTIZACIÓN PÚBLICA EN VIVO'
                 : 'DEMO SIMULADO · FEED SINTÉTICO'
               : isLivePublicSource
-              ? 'COTIZACIÓN PÚBLICA EN VIVO'
-              : 'FEED INTERNO SIMULADO'}
+                ? 'COTIZACIÓN PÚBLICA EN VIVO'
+                : 'FEED INTERNO SIMULADO'}
           </span>
           <span className="text-slate-600">·</span>
           <span
-            className={`inline-flex items-center gap-1.5 ${
-              wsStatus === 'CONNECTED' && !isConnectionStale
+            className={`inline-flex items-center gap-1.5 ${wsStatus === 'CONNECTED' && !isConnectionStale
                 ? 'text-emerald-400'
                 : wsStatus === 'RECONNECTING'
-                ? 'text-amber-400'
-                : 'text-red-400'
-            }`}
+                  ? 'text-amber-400'
+                  : 'text-red-400'
+              }`}
           >
             {wsStatus === 'CONNECTED' && !isConnectionStale ? (
               <Wifi className="h-3.5 w-3.5" />
@@ -770,8 +809,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
             {wsStatus === 'CONNECTED' && !isConnectionStale
               ? 'WS En Vivo'
               : wsStatus === 'RECONNECTING'
-              ? 'Reconectando...'
-              : 'Sin Conexión'}
+                ? 'Reconectando...'
+                : 'Sin Conexión'}
           </span>
           {latencyMs !== null && (
             <>
@@ -832,9 +871,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                     Variación ({CHART_WINDOWS.find((w) => w.sec === chartWindowSec)?.label})
                   </div>
                   <div
-                    className={`font-mono text-sm font-semibold tabular-nums flex items-center gap-1 ${
-                      periodMetrics.absDelta >= 0 ? 'text-emerald-400' : 'text-red-400'
-                    }`}
+                    className={`font-mono text-sm font-semibold tabular-nums flex items-center gap-1 ${periodMetrics.absDelta >= 0 ? 'text-emerald-400' : 'text-red-400'
+                      }`}
                   >
                     {periodMetrics.absDelta >= 0 ? (
                       <ArrowUpRight className="h-3.5 w-3.5" />
@@ -855,13 +893,12 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                 <div className="text-left lg:text-right">
                   <div className="text-[10px] uppercase tracking-wider text-slate-400">Tendencia Actual</div>
                   <div
-                    className={`font-mono text-sm font-bold tracking-wide flex items-center gap-1.5 lg:justify-end ${
-                      trendLabel === 'ALCISTA'
+                    className={`font-mono text-sm font-bold tracking-wide flex items-center gap-1.5 lg:justify-end ${trendLabel === 'ALCISTA'
                         ? 'text-emerald-400'
                         : trendLabel === 'BAJISTA'
-                        ? 'text-red-400'
-                        : 'text-sky-400'
-                    }`}
+                          ? 'text-red-400'
+                          : 'text-sky-400'
+                      }`}
                   >
                     <Activity className="h-3.5 w-3.5" />
                     <span>{trendLabel}</span>
@@ -901,11 +938,10 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
               <div className="rounded-lg bg-[#080B11] border border-white/6 px-3 py-2 col-span-2 sm:col-span-1">
                 <div className="text-[10px] text-slate-400">Cambio 24h</div>
                 <div
-                  className={`font-mono font-semibold tabular-nums mt-0.5 ${
-                    (liveMarketPatch?.change_24h ?? currentMarket?.change_24h ?? 0) >= 0
+                  className={`font-mono font-semibold tabular-nums mt-0.5 ${(liveMarketPatch?.change_24h ?? currentMarket?.change_24h ?? 0) >= 0
                       ? 'text-emerald-400'
                       : 'text-red-400'
-                  }`}
+                    }`}
                 >
                   {(liveMarketPatch?.change_24h ?? currentMarket?.change_24h ?? 0) >= 0 ? '+' : ''}
                   {(liveMarketPatch?.change_24h ?? currentMarket?.change_24h ?? 0).toFixed(2)}%
@@ -925,11 +961,10 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                     key={w.sec}
                     type="button"
                     onClick={() => setChartWindowSec(w.sec)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-                      chartWindowSec === w.sec
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap shrink-0 transition-colors cursor-pointer ${chartWindowSec === w.sec
                         ? 'bg-sky-500/20 text-sky-300 border border-sky-400/40 font-semibold'
                         : 'bg-[#080B11] text-slate-400 border border-white/8 hover:text-white'
-                    }`}
+                      }`}
                   >
                     {w.label}
                   </button>
@@ -944,55 +979,50 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                 <button
                   type="button"
                   onClick={() => setIndicatorsToggle((s) => ({ ...s, ema: !s.ema }))}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${
-                    indicatorsToggle.ema
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${indicatorsToggle.ema
                       ? 'bg-sky-500/15 border-sky-400/40 text-sky-300 font-semibold'
                       : 'bg-[#080B11] border-white/8 text-slate-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   EMA
                 </button>
                 <button
                   type="button"
                   onClick={() => setIndicatorsToggle((s) => ({ ...s, bollinger: !s.bollinger }))}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${
-                    indicatorsToggle.bollinger
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${indicatorsToggle.bollinger
                       ? 'bg-amber-500/15 border-amber-400/40 text-amber-300 font-semibold'
                       : 'bg-[#080B11] border-white/8 text-slate-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   Bollinger
                 </button>
                 <button
                   type="button"
                   onClick={() => setIndicatorsToggle((s) => ({ ...s, volume: !s.volume }))}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${
-                    indicatorsToggle.volume
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${indicatorsToggle.volume
                       ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-300 font-semibold'
                       : 'bg-[#080B11] border-white/8 text-slate-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   Volumen
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowRsi((v) => !v)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${
-                    showRsi
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${showRsi
                       ? 'bg-violet-500/15 border-violet-400/40 text-violet-300 font-semibold'
                       : 'bg-[#080B11] border-white/8 text-slate-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   RSI
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowMacd((v) => !v)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${
-                    showMacd
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border cursor-pointer ${showMacd
                       ? 'bg-blue-500/15 border-blue-400/40 text-blue-300 font-semibold'
                       : 'bg-[#080B11] border-white/8 text-slate-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   MACD
                 </button>
@@ -1021,13 +1051,12 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                   <div className="rounded-lg bg-[#080B11] border border-white/6 px-3 py-2 flex items-center justify-between">
                     <span className="text-slate-400">RSI (14)</span>
                     <span
-                      className={`font-semibold tabular-nums ${
-                        indicators.rsi14 >= 70
+                      className={`font-semibold tabular-nums ${indicators.rsi14 >= 70
                           ? 'text-red-400'
                           : indicators.rsi14 <= 30
-                          ? 'text-emerald-400'
-                          : 'text-sky-300'
-                      }`}
+                            ? 'text-emerald-400'
+                            : 'text-sky-300'
+                        }`}
                     >
                       {indicators.rsi14.toFixed(1)}
                     </span>
@@ -1037,9 +1066,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                   <div className="rounded-lg bg-[#080B11] border border-white/6 px-3 py-2 flex items-center justify-between">
                     <span className="text-slate-400">MACD</span>
                     <span
-                      className={`font-semibold tabular-nums ${
-                        indicators.macd >= indicators.macdSignal ? 'text-emerald-400' : 'text-red-400'
-                      }`}
+                      className={`font-semibold tabular-nums ${indicators.macd >= indicators.macdSignal ? 'text-emerald-400' : 'text-red-400'
+                        }`}
                     >
                       {indicators.macd >= 0 ? '+' : ''}
                       {indicators.macd.toFixed(3)}
@@ -1074,8 +1102,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                     {indicators.trendBias === 'BULLISH'
                       ? 'ALCISTA'
                       : indicators.trendBias === 'BEARISH'
-                      ? 'BAJISTA'
-                      : 'NEUTRAL'}
+                        ? 'BAJISTA'
+                        : 'NEUTRAL'}
                   </span>
                 </div>
               </div>
@@ -1104,8 +1132,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                         activePnlStats.delta1s > 0
                           ? 'text-emerald-400 font-semibold'
                           : activePnlStats.delta1s < 0
-                          ? 'text-red-400 font-semibold'
-                          : 'text-slate-300'
+                            ? 'text-red-400 font-semibold'
+                            : 'text-slate-300'
                       }
                     >
                       {activePnlStats.delta1s >= 0 ? '+' : ''}
@@ -1119,15 +1147,15 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                         activePnlStats.trend === 'UP'
                           ? 'text-emerald-400 font-semibold'
                           : activePnlStats.trend === 'DOWN'
-                          ? 'text-red-400 font-semibold'
-                          : 'text-sky-300 font-semibold'
+                            ? 'text-red-400 font-semibold'
+                            : 'text-sky-300 font-semibold'
                       }
                     >
                       {activePnlStats.trend === 'UP'
                         ? '▲ Subiendo'
                         : activePnlStats.trend === 'DOWN'
-                        ? '▼ Bajando'
-                        : '● Estable'}
+                          ? '▼ Bajando'
+                          : '● Estable'}
                     </span>
                   </div>
                 </div>
@@ -1171,9 +1199,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                 <div className="rounded-lg bg-[#080B11] border border-white/6 px-3 py-2">
                   <div className="text-[10px] font-sans text-slate-400">Diferencia Direccional</div>
                   <div
-                    className={`font-semibold mt-0.5 ${
-                      liveTradeMetrics.signedPricePct >= 0 ? 'text-emerald-400' : 'text-red-400'
-                    }`}
+                    className={`font-semibold mt-0.5 ${liveTradeMetrics.signedPricePct >= 0 ? 'text-emerald-400' : 'text-red-400'
+                      }`}
                   >
                     {liveTradeMetrics.signedPricePct >= 0 ? '+' : ''}
                     {liveTradeMetrics.signedPricePct.toFixed(4)}%
@@ -1204,14 +1231,14 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                 lastClosedTrade.profit > 0
                   ? tColors.highProfit
                   : lastClosedTrade.profit < 0
-                  ? tColors.highLoss
-                  : tColors.neutral;
+                    ? tColors.highLoss
+                    : tColors.neutral;
               const closedRetPct =
                 lastClosedTrade.return_pct !== undefined
                   ? lastClosedTrade.return_pct
                   : lastClosedTrade.amount > 0
-                  ? Number(((lastClosedTrade.profit / lastClosedTrade.amount) * 100).toFixed(2))
-                  : 0;
+                    ? Number(((lastClosedTrade.profit / lastClosedTrade.amount) * 100).toFixed(2))
+                    : 0;
               return (
                 <div className="rounded-xl border border-white/10 bg-[#111520] p-4 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1310,9 +1337,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span
-                      className={`font-mono text-2xl font-bold tabular-nums leading-none ${
-                        activeTiming.isUrgent && animOn ? 'text-amber-300 animate-pulse' : 'text-white'
-                      }`}
+                      className={`font-mono text-2xl font-bold tabular-nums leading-none ${activeTiming.isUrgent && animOn ? 'text-amber-300 animate-pulse' : 'text-white'
+                        }`}
                     >
                       {formatCountdown(activeTiming.remSec)}
                     </span>
@@ -1340,15 +1366,13 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
 
                   {/* Animated Dynamic PnL Readout */}
                   <div
-                    className={`font-mono text-xl font-extrabold tabular-nums tracking-tight ${
-                      animOn ? 'transition-transform duration-300' : ''
-                    } ${
-                      animOn && pnlDirectionAnim === 'UP'
+                    className={`font-mono text-xl font-extrabold tabular-nums tracking-tight ${animOn ? 'transition-transform duration-300' : ''
+                      } ${animOn && pnlDirectionAnim === 'UP'
                         ? '-translate-y-0.5'
                         : animOn && pnlDirectionAnim === 'DOWN'
-                        ? 'translate-y-0.5'
-                        : ''
-                    }`}
+                          ? 'translate-y-0.5'
+                          : ''
+                      }`}
                     style={{ color: liveTradeMetrics.thermalColor }}
                   >
                     {liveTradeMetrics.dynamicPnl >= 0 ? '+' : ''}
@@ -1379,9 +1403,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                   />
                   {/* Moving Thermal Indicator Dot */}
                   <div
-                    className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-4 w-4 rounded-full border-2 border-white shadow-md ${
-                      animOn ? 'transition-all duration-300 ease-out' : ''
-                    }`}
+                    className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-4 w-4 rounded-full border-2 border-white shadow-md ${animOn ? 'transition-all duration-300 ease-out' : ''
+                      }`}
                     style={{
                       left: `${liveTradeMetrics.thermalScore}%`,
                       backgroundColor: liveTradeMetrics.thermalColor,
@@ -1408,9 +1431,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                 <div className="flex justify-between text-slate-400">
                   <span className="font-sans">Cierre proyectado:</span>
                   <span
-                    className={`font-semibold ${
-                      liveTradeMetrics.projectedSettlementPnl >= 0 ? 'text-emerald-400' : 'text-red-400'
-                    }`}
+                    className={`font-semibold ${liveTradeMetrics.projectedSettlementPnl >= 0 ? 'text-emerald-400' : 'text-red-400'
+                      }`}
                   >
                     {liveTradeMetrics.projectedSettlementPnl >= 0 ? '+' : ''}$
                     {liveTradeMetrics.projectedSettlementPnl.toFixed(2)}
@@ -1435,38 +1457,35 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
           ) : lastClosedTrade ? (
             /* Full PnL Settlement Summary Card */
             <div
-              className={`rounded-xl border p-4 space-y-2.5 ${
-                animOn ? 'transition-all duration-500' : ''
-              } ${
-                lastClosedTrade.status === 'WON'
+              className={`rounded-xl border p-4 space-y-2.5 ${animOn ? 'transition-all duration-500' : ''
+                } ${lastClosedTrade.status === 'WON'
                   ? 'border-emerald-500/45 bg-emerald-500/12'
                   : lastClosedTrade.status === 'LOST'
-                  ? 'border-red-500/45 bg-red-500/12'
-                  : 'border-slate-500/35 bg-slate-500/10'
-              }`}
+                    ? 'border-red-500/45 bg-red-500/12'
+                    : 'border-slate-500/35 bg-slate-500/10'
+                }`}
             >
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-white">
                   Operación Finalizada · {lastClosedTrade.symbol} ({lastClosedTrade.direction})
                 </span>
                 <span
-                  className={`font-bold ${
-                    lastClosedTrade.status === 'WON'
+                  className={`font-bold ${lastClosedTrade.status === 'WON'
                       ? 'text-emerald-400'
                       : lastClosedTrade.status === 'LOST'
-                      ? 'text-red-400'
-                      : lastClosedTrade.status === 'CANCELLED'
-                      ? 'text-amber-300'
-                      : 'text-slate-300'
-                  }`}
+                        ? 'text-red-400'
+                        : lastClosedTrade.status === 'CANCELLED'
+                          ? 'text-amber-300'
+                          : 'text-slate-300'
+                    }`}
                 >
                   {lastClosedTrade.status === 'WON'
                     ? 'WIN (GANADA)'
                     : lastClosedTrade.status === 'LOST'
-                    ? 'LOSS (PERDIDA)'
-                    : lastClosedTrade.status === 'CANCELLED'
-                    ? 'CANCELADA'
-                    : 'DRAW (EMPATE)'}
+                      ? 'LOSS (PERDIDA)'
+                      : lastClosedTrade.status === 'CANCELLED'
+                        ? 'CANCELADA'
+                        : 'DRAW (EMPATE)'}
                 </span>
               </div>
 
@@ -1474,13 +1493,12 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                 <div>
                   <div className="text-[10px] font-sans text-slate-400">PnL Final Liquidado</div>
                   <div
-                    className={`text-lg font-extrabold ${
-                      lastClosedTrade.profit > 0
+                    className={`text-lg font-extrabold ${lastClosedTrade.profit > 0
                         ? 'text-emerald-400'
                         : lastClosedTrade.profit < 0
-                        ? 'text-red-400'
-                        : 'text-slate-300'
-                    }`}
+                          ? 'text-red-400'
+                          : 'text-slate-300'
+                      }`}
                   >
                     {lastClosedTrade.profit >= 0 ? '+' : ''}
                     {lastClosedTrade.profit.toFixed(2)} USDT
@@ -1489,21 +1507,20 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                 <div className="text-right">
                   <div className="text-[10px] font-sans text-slate-400">Rendimiento</div>
                   <div
-                    className={`text-sm font-bold ${
-                      lastClosedTrade.profit > 0
+                    className={`text-sm font-bold ${lastClosedTrade.profit > 0
                         ? 'text-emerald-400'
                         : lastClosedTrade.profit < 0
-                        ? 'text-red-400'
-                        : 'text-slate-300'
-                    }`}
+                          ? 'text-red-400'
+                          : 'text-slate-300'
+                      }`}
                   >
                     {(() => {
                       const pct =
                         lastClosedTrade.return_pct !== undefined
                           ? lastClosedTrade.return_pct
                           : lastClosedTrade.amount > 0
-                          ? (lastClosedTrade.profit / lastClosedTrade.amount) * 100
-                          : 0;
+                            ? (lastClosedTrade.profit / lastClosedTrade.amount) * 100
+                            : 0;
                       return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
                     })()}
                   </div>
@@ -1569,11 +1586,10 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                     key={v}
                     type="button"
                     onClick={() => setAmount(String(v))}
-                    className={`rounded-lg border py-2 min-h-[38px] text-xs font-mono transition-colors cursor-pointer ${
-                      Number(amount) === v
+                    className={`rounded-lg border py-2 min-h-[38px] text-xs font-mono transition-colors cursor-pointer ${Number(amount) === v
                         ? 'border-blue-500/60 bg-blue-500/15 text-blue-300 font-semibold'
                         : 'border-white/10 bg-[#080B11] text-slate-300 hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     ${v}
                   </button>
@@ -1593,11 +1609,10 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                     key={sec}
                     type="button"
                     onClick={() => setDurationSec(sec)}
-                    className={`py-2.5 min-h-[42px] rounded-lg text-xs font-mono whitespace-nowrap transition-colors cursor-pointer ${
-                      durationSec === sec
+                    className={`py-2.5 min-h-[42px] rounded-lg text-xs font-mono whitespace-nowrap transition-colors cursor-pointer ${durationSec === sec
                         ? 'bg-blue-600 text-white font-semibold shadow-sm'
                         : 'bg-[#080B11] border border-white/8 text-slate-400 hover:text-white'
-                    }`}
+                      }`}
                   >
                     {formatDurationLabel(sec)}
                   </button>
