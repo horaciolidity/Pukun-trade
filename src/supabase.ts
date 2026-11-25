@@ -207,3 +207,269 @@ export async function getCurrentSupabaseUser(): Promise<UserProfile | null> {
   }
 }
 
+// ============================================================================
+// SUPERADMIN REAL SUPABASE MANAGEMENT (USERS, BALANCES, DEPOSITS, MASTER WALLETS)
+// ============================================================================
+
+export interface AdminSupabaseUserRow {
+  id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  kyc_status: string;
+  status: string;
+  referral_code?: string;
+  created_at?: string;
+  wallets: Array<{ env: string; asset: string; available: number; locked: number }>;
+}
+
+export interface AdminSupabaseTxRow {
+  id: string;
+  user_id: string;
+  user_email?: string;
+  env: string;
+  type: string;
+  asset: string;
+  network: string;
+  amount: number;
+  txid: string;
+  address: string;
+  status: string;
+  created_at: string;
+}
+
+export interface DepositGatewayConfig {
+  provider: 'DIRECT_MASTER' | 'OXAPAY' | 'CRYPTOMUS' | 'NOWPAYMENTS';
+  masterAddresses: Record<string, string>;
+  oxapayMerchantNote?: string;
+}
+
+export const DEFAULT_DEPOSIT_GATEWAY_CONFIG: DepositGatewayConfig = {
+  provider: 'DIRECT_MASTER',
+  masterAddresses: {
+    'Tron (TRC-20)': '',
+    'BNB Smart Chain': '',
+    'Ethereum (ERC-20)': '',
+    Polygon: '',
+    Arbitrum: '',
+    Bitcoin: '',
+    Solana: '',
+  },
+};
+
+const DEPOSIT_CFG_STORAGE = 'pukun_master_deposit_config_v1';
+
+export async function fetchDepositGatewayConfig(): Promise<DepositGatewayConfig> {
+  let localCfg: DepositGatewayConfig | null = null;
+  try {
+    const raw = localStorage.getItem(DEPOSIT_CFG_STORAGE);
+    if (raw) localCfg = JSON.parse(raw) as DepositGatewayConfig;
+  } catch {
+    // ignore
+  }
+  if (!isSupabaseConfigured()) return localCfg || DEFAULT_DEPOSIT_GATEWAY_CONFIG;
+  try {
+    const { data } = await supabase
+      .from('platform_settings')
+      .select('value_json')
+      .eq('key', 'deposit_gateway')
+      .maybeSingle();
+    if (data?.value_json) {
+      const merged: DepositGatewayConfig = {
+        ...DEFAULT_DEPOSIT_GATEWAY_CONFIG,
+        ...(data.value_json as Partial<DepositGatewayConfig>),
+        masterAddresses: {
+          ...DEFAULT_DEPOSIT_GATEWAY_CONFIG.masterAddresses,
+          ...((data.value_json as Partial<DepositGatewayConfig>).masterAddresses || {}),
+        },
+      };
+      localStorage.setItem(DEPOSIT_CFG_STORAGE, JSON.stringify(merged));
+      return merged;
+    }
+  } catch {
+    // table may not exist yet
+  }
+  return localCfg || DEFAULT_DEPOSIT_GATEWAY_CONFIG;
+}
+
+export async function saveDepositGatewayConfig(cfg: DepositGatewayConfig): Promise<void> {
+  try {
+    localStorage.setItem(DEPOSIT_CFG_STORAGE, JSON.stringify(cfg));
+  } catch {
+    // ignore
+  }
+  if (!isSupabaseConfigured()) return;
+  await supabase.from('platform_settings').upsert({
+    key: 'deposit_gateway',
+    value_json: cfg,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+export async function adminFetchAllUsersAndTxs(): Promise<{
+  users: AdminSupabaseUserRow[];
+  transactions: AdminSupabaseTxRow[];
+  warning?: string;
+}> {
+  if (!isSupabaseConfigured()) {
+    return { users: [], transactions: [], warning: 'Supabase no configurado.' };
+  }
+
+  const [{ data: profiles, error: pErr }, { data: wallets }, { data: txs }] = await Promise.all([
+    supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+    supabase.from('wallets').select('*'),
+    supabase.from('transactions').select('*').order('created_at', { ascending: false }).limit(100),
+  ]);
+
+  if (pErr) {
+    return {
+      users: [],
+      transactions: [],
+      warning: `Permiso/Tabla Supabase: ${pErr.message}. Ejecuta el SQL de Superadmin en Supabase SQL Editor.`,
+    };
+  }
+
+  const emailById = new Map<string, string>();
+  const users: AdminSupabaseUserRow[] = (profiles || []).map((p: any) => {
+    emailById.set(p.id, p.email || '');
+    const userWallets = (wallets || [])
+      .filter((w: any) => w.user_id === p.id)
+      .map((w: any) => ({
+        env: w.env || 'DEMO',
+        asset: w.asset || 'USDT',
+        available: Number(w.available || 0),
+        locked: Number(w.locked || 0),
+      }));
+    return {
+      id: p.id,
+      email: p.email || '',
+      full_name: p.full_name || 'Sin nombre',
+      role: (isSuperadminEmail(p.email) ? 'SUPERADMIN' : p.role || 'USER') as UserRole,
+      kyc_status: p.kyc_status || 'UNVERIFIED',
+      status: p.status || 'ACTIVE',
+      referral_code: p.referral_code || '',
+      created_at: p.created_at,
+      wallets: userWallets,
+    };
+  });
+
+  const transactions: AdminSupabaseTxRow[] = (txs || []).map((t: any) => ({
+    id: t.id,
+    user_id: t.user_id,
+    user_email: emailById.get(t.user_id) || t.user_email || t.user_id,
+    env: t.env || 'REAL',
+    type: t.type || 'DEPOSIT',
+    asset: t.asset || 'USDT',
+    network: t.network || 'Tron (TRC-20)',
+    amount: Number(t.amount || 0),
+    txid: t.txid || '',
+    address: t.address || '',
+    status: t.status || 'PENDING',
+    created_at: t.created_at || new Date().toISOString(),
+  }));
+
+  return { users, transactions };
+}
+
+export async function adminAdjustUserBalance(params: {
+  userId: string;
+  env: 'DEMO' | 'REAL';
+  asset: string;
+  mode: 'ADD' | 'SUB' | 'SET';
+  amount: number;
+}): Promise<number> {
+  const { userId, env, asset, mode, amount } = params;
+  if (!isSupabaseConfigured()) throw new Error('Supabase no configurado.');
+  if (!Number.isFinite(amount) || amount < 0) throw new Error('Monto inválido.');
+
+  const { data: existing } = await supabase
+    .from('wallets')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('env', env)
+    .eq('asset', asset)
+    .maybeSingle();
+
+  const current = Number(existing?.available || 0);
+  let nextAvailable = current;
+  if (mode === 'ADD') nextAvailable = current + amount;
+  else if (mode === 'SUB') nextAvailable = Math.max(0, current - amount);
+  else nextAvailable = amount;
+
+  nextAvailable = Number(nextAvailable.toFixed(6));
+
+  const { error } = await supabase.from('wallets').upsert(
+    {
+      user_id: userId,
+      env,
+      asset,
+      available: nextAvailable,
+      locked: Number(existing?.locked || 0),
+    },
+    { onConflict: 'user_id,env,asset' }
+  );
+
+  if (error) throw new Error(error.message);
+  return nextAvailable;
+}
+
+export async function adminReviewTransaction(tx: AdminSupabaseTxRow, action: 'APPROVE' | 'REJECT'): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Supabase no configurado.');
+  const nextStatus = action === 'APPROVE' ? 'COMPLETED' : 'REJECTED';
+
+  const { error } = await supabase.from('transactions').update({ status: nextStatus }).eq('id', tx.id);
+  if (error) throw new Error(error.message);
+
+  // If approving a DEPOSIT, credit user's balance automatically
+  if (action === 'APPROVE' && tx.type === 'DEPOSIT') {
+    await adminAdjustUserBalance({
+      userId: tx.user_id,
+      env: tx.env === 'REAL' ? 'REAL' : 'DEMO',
+      asset: tx.asset,
+      mode: 'ADD',
+      amount: tx.amount,
+    });
+  }
+  // If rejecting a WITHDRAW, refund user's balance automatically
+  if (action === 'REJECT' && tx.type === 'WITHDRAW') {
+    await adminAdjustUserBalance({
+      userId: tx.user_id,
+      env: tx.env === 'REAL' ? 'REAL' : 'DEMO',
+      asset: tx.asset,
+      mode: 'ADD',
+      amount: tx.amount,
+    });
+  }
+}
+
+export async function recordUserTxInSupabase(params: {
+  env: 'DEMO' | 'REAL';
+  type: 'DEPOSIT' | 'WITHDRAW';
+  asset: string;
+  network: string;
+  amount: number;
+  txid: string;
+  address: string;
+  status: string;
+}): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    await supabase.from('transactions').insert({
+      user_id: session.user.id,
+      user_email: session.user.email || '',
+      env: params.env,
+      type: params.type,
+      asset: params.asset,
+      network: params.network,
+      amount: params.amount,
+      txid: params.txid,
+      address: params.address,
+      status: params.status,
+    });
+  } catch {
+    // ignore if transactions table is not created yet
+  }
+}
+

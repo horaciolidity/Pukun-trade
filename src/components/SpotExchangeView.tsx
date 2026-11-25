@@ -277,18 +277,16 @@ export function SpotExchangeView({
           <button
             type="button"
             onClick={() => setTerminalMode('SIMPLE')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-              terminalMode === 'SIMPLE' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-            }`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${terminalMode === 'SIMPLE' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
           >
             Modo Sencillo
           </button>
           <button
             type="button"
             onClick={() => setTerminalMode('PRO')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-              terminalMode === 'PRO' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-            }`}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${terminalMode === 'PRO' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
           >
             Modo Profesional
           </button>
@@ -308,22 +306,20 @@ export function SpotExchangeView({
                 <button
                   type="button"
                   onClick={() => setSide('BUY')}
-                  className={`py-2.5 rounded-lg text-sm font-semibold border transition-colors cursor-pointer ${
-                    side === 'BUY'
+                  className={`py-2.5 rounded-lg text-sm font-semibold border transition-colors cursor-pointer ${side === 'BUY'
                       ? 'bg-emerald-600 border-emerald-500 text-white'
                       : 'bg-[#090B10] border-white/10 text-slate-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   Comprar {base}
                 </button>
                 <button
                   type="button"
                   onClick={() => setSide('SELL')}
-                  className={`py-2.5 rounded-lg text-sm font-semibold border transition-colors cursor-pointer ${
-                    side === 'SELL'
+                  className={`py-2.5 rounded-lg text-sm font-semibold border transition-colors cursor-pointer ${side === 'SELL'
                       ? 'bg-red-600 border-red-500 text-white'
                       : 'bg-[#090B10] border-white/10 text-slate-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   Vender {base}
                 </button>
@@ -372,11 +368,10 @@ export function SpotExchangeView({
 
               {feedback && (
                 <div
-                  className={`rounded-lg px-3.5 py-2.5 text-xs border ${
-                    feedback.type === 'ok'
+                  className={`rounded-lg px-3.5 py-2.5 text-xs border ${feedback.type === 'ok'
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                       : 'bg-red-500/10 border-red-500/30 text-red-300'
-                  }`}
+                    }`}
                 >
                   {feedback.text}
                 </div>
@@ -385,9 +380,8 @@ export function SpotExchangeView({
               <button
                 type="submit"
                 disabled={submitting}
-                className={`w-full rounded-lg py-3 text-sm font-semibold text-white transition-colors cursor-pointer ${
-                  side === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'
-                }`}
+                className={`w-full rounded-lg py-3 text-sm font-semibold text-white transition-colors cursor-pointer ${side === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'
+                  }`}
               >
                 {submitting ? 'Ejecutando...' : `Confirmar ${side === 'BUY' ? 'Compra' : 'Venta'} en ${env}`}
               </button>
@@ -403,9 +397,8 @@ export function SpotExchangeView({
                     key={tf}
                     type="button"
                     onClick={() => setTimeframe(tf)}
-                    className={`px-2.5 py-1 rounded text-xs font-mono cursor-pointer ${
-                      timeframe === tf ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-                    }`}
+                    className={`px-2.5 py-1 rounded text-xs font-mono cursor-pointer ${timeframe === tf ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
                   >
                     {tf}
                   </button>
@@ -427,9 +420,8 @@ export function SpotExchangeView({
                     key={tf}
                     type="button"
                     onClick={() => setTimeframe(tf)}
-                    className={`px-2.5 py-1 rounded text-xs font-mono cursor-pointer ${
-                      timeframe === tf ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-                    }`}
+                    className={`px-2.5 py-1 rounded text-xs font-mono cursor-pointer ${timeframe === tf ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
                   >
                     {tf}
                   </button>
@@ -439,18 +431,16 @@ export function SpotExchangeView({
                 <button
                   type="button"
                   onClick={() => setShowEma(!showEma)}
-                  className={`px-2.5 py-1 rounded border cursor-pointer ${
-                    showEma ? 'border-blue-500/40 bg-blue-500/15 text-blue-300' : 'border-white/10 text-slate-400'
-                  }`}
+                  className={`px-2.5 py-1 rounded border cursor-pointer ${showEma ? 'border-blue-500/40 bg-blue-500/15 text-blue-300' : 'border-white/10 text-slate-400'
+                    }`}
                 >
                   EMA 9/21
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowBb(!showBb)}
-                  className={`px-2.5 py-1 rounded border cursor-pointer ${
-                    showBb ? 'border-amber-500/40 bg-amber-500/15 text-amber-300' : 'border-white/10 text-slate-400'
-                  }`}
+                  className={`px-2.5 py-1 rounded border cursor-pointer ${showBb ? 'border-amber-500/40 bg-amber-500/15 text-amber-300' : 'border-white/10 text-slate-400'
+                    }`}
                 >
                   Bollinger
                 </button>
@@ -473,11 +463,10 @@ export function SpotExchangeView({
                 {symbolOpenOrders.map((ord) => (
                   <span
                     key={ord.id}
-                    className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-mono ${
-                      ord.side === 'BUY'
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-mono ${ord.side === 'BUY'
                         ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300'
                         : 'border-red-500/35 bg-red-500/10 text-red-300'
-                    }`}
+                      }`}
                   >
                     <span>
                       {ord.side} {ord.type} {ord.qty} {base} @ ${formatPrice(ord.price)}
@@ -571,18 +560,16 @@ export function SpotExchangeView({
               <button
                 type="button"
                 onClick={() => setSide('BUY')}
-                className={`py-2 rounded-lg text-xs font-semibold cursor-pointer ${
-                  side === 'BUY' ? 'bg-emerald-600 text-white' : 'bg-[#090B10] text-slate-400'
-                }`}
+                className={`py-2 rounded-lg text-xs font-semibold cursor-pointer ${side === 'BUY' ? 'bg-emerald-600 text-white' : 'bg-[#090B10] text-slate-400'
+                  }`}
               >
                 Comprar
               </button>
               <button
                 type="button"
                 onClick={() => setSide('SELL')}
-                className={`py-2 rounded-lg text-xs font-semibold cursor-pointer ${
-                  side === 'SELL' ? 'bg-red-600 text-white' : 'bg-[#090B10] text-slate-400'
-                }`}
+                className={`py-2 rounded-lg text-xs font-semibold cursor-pointer ${side === 'SELL' ? 'bg-red-600 text-white' : 'bg-[#090B10] text-slate-400'
+                  }`}
               >
                 Vender
               </button>
@@ -594,9 +581,8 @@ export function SpotExchangeView({
                   key={t}
                   type="button"
                   onClick={() => setOrderType(t)}
-                  className={`px-2 py-1 rounded text-[11px] font-medium cursor-pointer ${
-                    orderType === t ? 'bg-blue-600 text-white' : 'bg-[#090B10] text-slate-400 hover:text-white'
-                  }`}
+                  className={`px-2 py-1 rounded text-[11px] font-medium cursor-pointer ${orderType === t ? 'bg-blue-600 text-white' : 'bg-[#090B10] text-slate-400 hover:text-white'
+                    }`}
                 >
                   {t.replace('_', ' ')}
                 </button>
@@ -674,11 +660,10 @@ export function SpotExchangeView({
 
               {feedback && (
                 <div
-                  className={`rounded-lg px-3 py-2 text-[11px] border ${
-                    feedback.type === 'ok'
+                  className={`rounded-lg px-3 py-2 text-[11px] border ${feedback.type === 'ok'
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                       : 'bg-red-500/10 border-red-500/30 text-red-300'
-                  }`}
+                    }`}
                 >
                   {feedback.text}
                 </div>
@@ -687,9 +672,8 @@ export function SpotExchangeView({
               <button
                 type="submit"
                 disabled={submitting}
-                className={`w-full rounded-lg py-2.5 text-xs font-semibold text-white cursor-pointer ${
-                  side === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'
-                }`}
+                className={`w-full rounded-lg py-2.5 text-xs font-semibold text-white cursor-pointer ${side === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'
+                  }`}
               >
                 {submitting ? 'Procesando...' : `${side === 'BUY' ? 'Comprar' : 'Vender'} ${base} (${env})`}
               </button>
@@ -738,8 +722,8 @@ export function SpotExchangeView({
                         o.status === 'FILLED'
                           ? 'text-emerald-400'
                           : o.status === 'OPEN'
-                          ? 'text-blue-400'
-                          : 'text-slate-500'
+                            ? 'text-blue-400'
+                            : 'text-slate-500'
                       }
                     >
                       {o.status}

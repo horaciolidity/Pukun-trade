@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Plus, Check, X, Download, RotateCcw, Percent, Megaphone, Gift, Calendar, Trash2 } from 'lucide-react';
+import { ShieldCheck, Plus, Check, X, Download, RotateCcw, Percent, Megaphone, Gift, Calendar, Trash2, Users, Wallet, Search, RefreshCw } from 'lucide-react';
 import { apiFetch, formatCurrency, formatPrice, getStoredToken } from '../api';
+import {
+  adminAdjustUserBalance,
+  adminFetchAllUsersAndTxs,
+  adminReviewTransaction,
+  AdminSupabaseTxRow,
+  AdminSupabaseUserRow,
+  DEFAULT_DEPOSIT_GATEWAY_CONFIG,
+  DepositGatewayConfig,
+  fetchDepositGatewayConfig,
+  saveDepositGatewayConfig,
+} from '../supabase';
 import {
   AdminFutureEvent,
   AdminPlatformFees,
@@ -95,6 +106,7 @@ interface AdminQuickTradesData {
 }
 
 const ADMIN_TABS = [
+  { id: 'supabase_crm', label: 'Usuarios, Saldos & Depósitos' },
   { id: 'pukun_control', label: 'Comisiones, Banners & Eventos' },
   { id: 'stats', label: 'Estadísticas & Auditoría' },
   { id: 'users', label: 'Usuarios & Roles' },
@@ -108,7 +120,18 @@ const ADMIN_TABS = [
 ];
 
 export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRefresh }: Props) {
-  const [tab, setTab] = useState('pukun_control');
+  const [tab, setTab] = useState('supabase_crm');
+  const [sbUsers, setSbUsers] = useState<AdminSupabaseUserRow[]>([]);
+  const [sbTxs, setSbTxs] = useState<AdminSupabaseTxRow[]>([]);
+  const [sbWarning, setSbWarning] = useState('');
+  const [sbLoading, setSbLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [adjUserId, setAdjUserId] = useState('');
+  const [adjEnv, setAdjEnv] = useState<'REAL' | 'DEMO'>('REAL');
+  const [adjAsset, setAdjAsset] = useState('USDT');
+  const [adjMode, setAdjMode] = useState<'ADD' | 'SUB' | 'SET'>('ADD');
+  const [adjAmount, setAdjAmount] = useState('100');
+  const [depositCfg, setDepositCfg] = useState<DepositGatewayConfig>(DEFAULT_DEPOSIT_GATEWAY_CONFIG);
   const [data, setData] = useState<AdminOverview | null>(null);
   const [qtDraft, setQtDraft] = useState<QuickTradeConfig | null>(null);
   const [feesDraft, setFeesDraft] = useState<AdminPlatformFees>({
@@ -162,9 +185,29 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
     }
   }
 
+  async function loadSupabaseCrm() {
+    setSbLoading(true);
+    try {
+      const [{ users, transactions, warning }, depCfg] = await Promise.all([
+        adminFetchAllUsersAndTxs(),
+        fetchDepositGatewayConfig(),
+      ]);
+      setSbUsers(users);
+      setSbTxs(transactions);
+      setSbWarning(warning || '');
+      setDepositCfg(depCfg);
+      if (users.length > 0 && !adjUserId) {
+        setAdjUserId(users[0].id);
+      }
+    } finally {
+      setSbLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadOverview();
     loadQuickTradingAdmin('ALL');
+    loadSupabaseCrm();
   }, []);
 
   if (!['ADMIN', 'SUPERADMIN'].includes(userRole)) {
@@ -261,9 +304,8 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
-              tab === t.id ? 'bg-violet-600 text-white' : 'bg-[#111520] border border-white/10 text-slate-400 hover:text-white'
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${tab === t.id ? 'bg-violet-600 text-white' : 'bg-[#111520] border border-white/10 text-slate-400 hover:text-white'
+              }`}
           >
             {t.label}
           </button>
@@ -556,9 +598,8 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                 <button
                   type="button"
                   onClick={() => toggleProvider(p.id, p.enabled === 0)}
-                  className={`rounded-lg px-3 py-1.5 font-semibold cursor-pointer ${
-                    p.enabled ? 'bg-emerald-600 text-white' : 'bg-white/10 text-slate-400'
-                  }`}
+                  className={`rounded-lg px-3 py-1.5 font-semibold cursor-pointer ${p.enabled ? 'bg-emerald-600 text-white' : 'bg-white/10 text-slate-400'
+                    }`}
                 >
                   {p.enabled ? 'Habilitado' : 'En Reserva'}
                 </button>
@@ -671,9 +712,8 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                 <button
                   type="button"
                   onClick={() => setQtDraft({ ...qtDraft, enabled: !qtDraft.enabled })}
-                  className={`rounded-lg border p-2.5 text-left cursor-pointer ${
-                    qtDraft.enabled ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-[#090B10] text-slate-400'
-                  }`}
+                  className={`rounded-lg border p-2.5 text-left cursor-pointer ${qtDraft.enabled ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-[#090B10] text-slate-400'
+                    }`}
                 >
                   <div className="font-semibold">Módulo</div>
                   <div className="text-[11px]">{qtDraft.enabled ? 'Activo' : 'Desactivado'}</div>
@@ -681,9 +721,8 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                 <button
                   type="button"
                   onClick={() => setQtDraft({ ...qtDraft, demoOnly: !qtDraft.demoOnly })}
-                  className={`rounded-lg border p-2.5 text-left cursor-pointer ${
-                    qtDraft.demoOnly ? 'border-amber-500/40 bg-amber-500/10 text-amber-300' : 'border-sky-500/40 bg-sky-500/10 text-sky-300'
-                  }`}
+                  className={`rounded-lg border p-2.5 text-left cursor-pointer ${qtDraft.demoOnly ? 'border-amber-500/40 bg-amber-500/10 text-amber-300' : 'border-sky-500/40 bg-sky-500/10 text-sky-300'
+                    }`}
                 >
                   <div className="font-semibold">Restricción</div>
                   <div className="text-[11px]">{qtDraft.demoOnly ? 'Solo DEMO' : 'DEMO + REAL'}</div>
@@ -691,9 +730,8 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                 <button
                   type="button"
                   onClick={() => setQtDraft({ ...qtDraft, animationsEnabled: !qtDraft.animationsEnabled })}
-                  className={`rounded-lg border p-2.5 text-left cursor-pointer ${
-                    qtDraft.animationsEnabled ? 'border-violet-500/40 bg-violet-500/10 text-violet-300' : 'border-white/10 bg-[#090B10] text-slate-400'
-                  }`}
+                  className={`rounded-lg border p-2.5 text-left cursor-pointer ${qtDraft.animationsEnabled ? 'border-violet-500/40 bg-violet-500/10 text-violet-300' : 'border-white/10 bg-[#090B10] text-slate-400'
+                    }`}
                 >
                   <div className="font-semibold">Animaciones</div>
                   <div className="text-[11px]">{qtDraft.animationsEnabled ? 'Activadas' : 'Desactivadas'}</div>
@@ -767,9 +805,8 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                             : [...qtDraft.durations, sec].sort((a, b) => a - b);
                           if (next.length > 0) setQtDraft({ ...qtDraft, durations: next });
                         }}
-                        className={`px-3 py-1.5 rounded font-mono cursor-pointer border ${
-                          active ? 'bg-blue-600 border-blue-500 text-white font-semibold' : 'bg-[#090B10] border-white/10 text-slate-400'
-                        }`}
+                        className={`px-3 py-1.5 rounded font-mono cursor-pointer border ${active ? 'bg-blue-600 border-blue-500 text-white font-semibold' : 'bg-[#090B10] border-white/10 text-slate-400'
+                          }`}
                       >
                         {formatDurationLabel(sec)}
                       </button>
@@ -899,9 +936,8 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                       setQtEnvFilter(e);
                       loadQuickTradingAdmin(e);
                     }}
-                    className={`px-2.5 py-1 rounded font-mono cursor-pointer ${
-                      qtEnvFilter === e ? 'bg-violet-600 text-white font-semibold' : 'bg-[#090B10] text-slate-400 border border-white/10'
-                    }`}
+                    className={`px-2.5 py-1 rounded font-mono cursor-pointer ${qtEnvFilter === e ? 'bg-violet-600 text-white font-semibold' : 'bg-[#090B10] text-slate-400 border border-white/10'
+                      }`}
                   >
                     {e === 'ALL' ? 'DEMO + REAL' : e}
                   </button>
@@ -999,6 +1035,358 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'supabase_crm' && (
+        <div className="space-y-6">
+          {sbWarning && (
+            <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-4 text-xs text-amber-200">
+              {sbWarning}
+            </div>
+          )}
+
+          {/* 1. All Subscribed Users & Real Balances */}
+          <div className="rounded-xl border border-amber-500/25 bg-[#111520] p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-white">
+                <Users className="h-4 w-4 text-amber-400" />
+                <span>Todos los Correos Suscritos y Saldos ({sbUsers.length})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    placeholder="Buscar correo o nombre..."
+                    className="rounded-lg border border-white/10 bg-[#090B10] pl-8 pr-3 py-1.5 text-xs text-white"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={loadSupabaseCrm}
+                  disabled={sbLoading}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-white/10 cursor-pointer"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${sbLoading ? 'animate-spin' : ''}`} />
+                  <span>Actualizar</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-white/8">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#090B10] text-[10px] uppercase tracking-wider text-slate-400">
+                  <tr>
+                    <th className="py-2.5 px-3">Correo / Usuario</th>
+                    <th className="py-2.5 px-3">Rol</th>
+                    <th className="py-2.5 px-3 text-right">Saldo REAL (USDT)</th>
+                    <th className="py-2.5 px-3 text-right">Saldo DEMO (USDT)</th>
+                    <th className="py-2.5 px-3 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/6">
+                  {sbUsers
+                    .filter((u) => {
+                      const q = userSearch.trim().toLowerCase();
+                      if (!q) return true;
+                      return u.email.toLowerCase().includes(q) || u.full_name.toLowerCase().includes(q);
+                    })
+                    .map((u) => {
+                      const realUsdt = u.wallets.find((w) => w.env === 'REAL' && w.asset === 'USDT')?.available ?? 0;
+                      const demoUsdt = u.wallets.find((w) => w.env === 'DEMO' && w.asset === 'USDT')?.available ?? 0;
+                      return (
+                        <tr key={u.id} className="hover:bg-white/2">
+                          <td className="py-2.5 px-3">
+                            <div className="font-semibold text-white">{u.email}</div>
+                            <div className="text-[10px] text-slate-400">
+                              {u.full_name} · Ref: <span className="font-mono">{u.referral_code || '—'}</span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span
+                              className={`rounded px-2 py-0.5 text-[10px] font-bold ${u.role === 'SUPERADMIN'
+                                  ? 'bg-amber-500/20 text-amber-300'
+                                  : 'bg-white/10 text-slate-300'
+                                }`}
+                            >
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-400">
+                            ${formatCurrency(realUsdt)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-amber-300">
+                            ${formatCurrency(demoUsdt)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setAdjUserId(u.id)}
+                              className="rounded-lg border border-cyan-500/35 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-500/20 cursor-pointer"
+                            >
+                              Editar Saldo
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {sbUsers.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-6 text-center text-slate-400">
+                        No hay usuarios cargados aún (o falta ejecutar el SQL de permisos Superadmin en Supabase).
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Balance Modifier Form */}
+            <div className="rounded-xl border border-cyan-500/25 bg-[#090B10] p-4 space-y-3">
+              <div className="text-xs font-bold text-cyan-300">
+                Modificar / Acreditar / Descontar Saldo de Usuario
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-6 gap-2.5 text-xs">
+                <select
+                  value={adjUserId}
+                  onChange={(e) => setAdjUserId(e.target.value)}
+                  className="sm:col-span-2 rounded-lg border border-white/10 bg-[#111520] px-2.5 py-2 text-white"
+                >
+                  <option value="">Selecciona un correo...</option>
+                  {sbUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.email}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={adjEnv}
+                  onChange={(e) => setAdjEnv(e.target.value as 'REAL' | 'DEMO')}
+                  className="rounded-lg border border-white/10 bg-[#111520] px-2.5 py-2 text-white"
+                >
+                  <option value="REAL">Saldo REAL</option>
+                  <option value="DEMO">Saldo DEMO</option>
+                </select>
+                <select
+                  value={adjAsset}
+                  onChange={(e) => setAdjAsset(e.target.value)}
+                  className="rounded-lg border border-white/10 bg-[#111520] px-2.5 py-2 text-white"
+                >
+                  <option value="USDT">USDT</option>
+                  <option value="BTC">BTC</option>
+                  <option value="ETH">ETH</option>
+                  <option value="SOL">SOL</option>
+                  <option value="CAIX">CAIX</option>
+                </select>
+                <select
+                  value={adjMode}
+                  onChange={(e) => setAdjMode(e.target.value as 'ADD' | 'SUB' | 'SET')}
+                  className="rounded-lg border border-white/10 bg-[#111520] px-2.5 py-2 text-white"
+                >
+                  <option value="ADD">Sumar (+)</option>
+                  <option value="SUB">Restar (-)</option>
+                  <option value="SET">Fijar Exacto (=)</option>
+                </select>
+                <input
+                  type="number"
+                  step="any"
+                  value={adjAmount}
+                  onChange={(e) => setAdjAmount(e.target.value)}
+                  placeholder="Monto"
+                  className="rounded-lg border border-white/10 bg-[#111520] px-2.5 py-2 font-mono text-white"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!adjUserId) {
+                    setFeedback('Selecciona un usuario primero.');
+                    return;
+                  }
+                  try {
+                    const nextBal = await adminAdjustUserBalance({
+                      userId: adjUserId,
+                      env: adjEnv,
+                      asset: adjAsset,
+                      mode: adjMode,
+                      amount: Number(adjAmount),
+                    });
+                    setFeedback(`Saldo ${adjEnv} (${adjAsset}) actualizado correctamente. Nuevo saldo: ${nextBal}`);
+                    loadSupabaseCrm();
+                  } catch (err) {
+                    setFeedback(err instanceof Error ? err.message : 'Error modificando saldo');
+                  }
+                }}
+                className="rounded-lg bg-cyan-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 cursor-pointer"
+              >
+                Aplicar Cambio de Saldo en Supabase
+              </button>
+            </div>
+          </div>
+
+          {/* 2. Deposit & Withdrawal Approvals */}
+          <div className="rounded-xl border border-white/10 bg-[#111520] p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-bold text-white">
+                Aprobación / Desaprobación de Depósitos y Retiros ({sbTxs.length})
+              </div>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-white/8">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#090B10] text-[10px] uppercase tracking-wider text-slate-400">
+                  <tr>
+                    <th className="py-2.5 px-3">Usuario</th>
+                    <th className="py-2.5 px-3">Tipo / Red</th>
+                    <th className="py-2.5 px-3 text-right">Monto</th>
+                    <th className="py-2.5 px-3">TXID</th>
+                    <th className="py-2.5 px-3">Estado</th>
+                    <th className="py-2.5 px-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/6">
+                  {sbTxs.map((tx) => (
+                    <tr key={tx.id}>
+                      <td className="py-2.5 px-3 text-white font-medium">{tx.user_email}</td>
+                      <td className="py-2.5 px-3">
+                        <span className="font-bold text-amber-300">{tx.type}</span> · {tx.env} · {tx.network}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-white">
+                        {tx.amount} {tx.asset}
+                      </td>
+                      <td className="py-2.5 px-3 font-mono text-[10px] text-slate-400 max-w-36 truncate">
+                        {tx.txid || '—'}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span
+                          className={`rounded px-2 py-0.5 text-[10px] font-bold ${tx.status === 'COMPLETED'
+                              ? 'bg-emerald-500/20 text-emerald-300'
+                              : tx.status === 'REJECTED'
+                                ? 'bg-red-500/20 text-red-300'
+                                : 'bg-amber-500/20 text-amber-300'
+                            }`}
+                        >
+                          {tx.status}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        {tx.status === 'PENDING' ? (
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await adminReviewTransaction(tx, 'APPROVE');
+                                  setFeedback(`Depósito/Transacción aprobada y saldo acreditado (${tx.amount} ${tx.asset}).`);
+                                  loadSupabaseCrm();
+                                } catch (err) {
+                                  setFeedback(err instanceof Error ? err.message : 'Error al aprobar');
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-500 cursor-pointer"
+                            >
+                              <Check className="h-3 w-3" />
+                              <span>Aprobar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await adminReviewTransaction(tx, 'REJECT');
+                                  setFeedback(`Transacción rechazada.`);
+                                  loadSupabaseCrm();
+                                } catch (err) {
+                                  setFeedback(err instanceof Error ? err.message : 'Error al rechazar');
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 rounded bg-red-600/80 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-red-500 cursor-pointer"
+                            >
+                              <X className="h-3 w-3" />
+                              <span>Rechazar</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-slate-500">Procesada</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {sbTxs.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-6 text-center text-slate-400">
+                        Sin depósitos o retiros registrados todavía.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 3. Master Deposit Addresses & Gateway Configuration */}
+          <div className="rounded-xl border border-amber-500/25 bg-[#111520] p-5 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-amber-300">
+              <Wallet className="h-4 w-4" />
+              <span>Tus Direcciones de Recepción (Master Wallets) & Pasarela Multi-Red</span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Coloca aquí tus direcciones reales (de Binance, Trust Wallet, MetaMask, Ledger o TronLink) para recibir los depósitos de tus usuarios, o selecciona una pasarela de direcciones estáticas por usuario (OxaPay / Cryptomus / NOWPayments).
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block text-slate-400 mb-1">Modo de Depósitos</label>
+                <select
+                  value={depositCfg.provider}
+                  onChange={(e) =>
+                    setDepositCfg({
+                      ...depositCfg,
+                      provider: e.target.value as DepositGatewayConfig['provider'],
+                    })
+                  }
+                  className="w-full rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+                >
+                  <option value="DIRECT_MASTER">Directo a tus Master Wallets + Aprobación TXID (Activo Ya)</option>
+                  <option value="OXAPAY">OxaPay Static Address API (1 address por usuario)</option>
+                  <option value="CRYPTOMUS">Cryptomus Static Wallets API (1 address por usuario)</option>
+                  <option value="NOWPAYMENTS">NOWPayments Custody API (1 address por usuario)</option>
+                </select>
+              </div>
+              {Object.keys(DEFAULT_DEPOSIT_GATEWAY_CONFIG.masterAddresses).map((net) => (
+                <div key={net}>
+                  <label className="block text-slate-400 mb-1">Tu Dirección {net}</label>
+                  <input
+                    type="text"
+                    value={depositCfg.masterAddresses[net] || ''}
+                    onChange={(e) =>
+                      setDepositCfg({
+                        ...depositCfg,
+                        masterAddresses: { ...depositCfg.masterAddresses, [net]: e.target.value },
+                      })
+                    }
+                    placeholder={`Pega tu address real de ${net}...`}
+                    className="w-full rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 font-mono text-white"
+                  />
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await saveDepositGatewayConfig(depositCfg);
+                  setFeedback('Tus Master Deposit Addresses y pasarela se guardaron correctamente.');
+                } catch (err) {
+                  setFeedback(err instanceof Error ? err.message : 'Error guardando direcciones');
+                }
+              }}
+              className="rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 cursor-pointer"
+            >
+              Guardar Mis Direcciones de Depósito
+            </button>
           </div>
         </div>
       )}
@@ -1349,9 +1737,8 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                 onClick={() =>
                   updateConfig('enabled_modules', { ...data.configs.enabled_modules, [modKey]: !enabled })
                 }
-                className={`rounded-lg border p-3 text-left cursor-pointer ${
-                  enabled ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-[#090B10] text-slate-500'
-                }`}
+                className={`rounded-lg border p-3 text-left cursor-pointer ${enabled ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-[#090B10] text-slate-500'
+                  }`}
               >
                 <div className="font-semibold capitalize">{modKey}</div>
                 <div className="text-[11px] mt-0.5">{enabled ? 'Habilitado' : 'Desactivado'}</div>

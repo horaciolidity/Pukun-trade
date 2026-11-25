@@ -1,5 +1,6 @@
 import { DEFAULT_MARKETS } from './defaultMarkets';
 import { computeQuickTradeSettlement } from './utils/quickTradeMath';
+import { fetchDepositGatewayConfig, recordUserTxInSupabase } from './supabase';
 import type {
   AdminFutureEvent,
   AdminPlatformFees,
@@ -701,9 +702,27 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
   // 3. Wallets & Demo Controls
   if (pathname === '/api/wallet' && method === 'GET') {
     const summary = computeWalletSummary(state, envParam);
+    const depCfg = await fetchDepositGatewayConfig();
+    const walletsWithMaster = state.wallets[envParam].map((w) => {
+      const mergedAddresses: Record<string, string> = { ...w.addresses };
+      for (const [net, addr] of Object.entries(depCfg.masterAddresses || {})) {
+        if (addr && addr.trim()) {
+          if (w.asset === 'USDT' && (net.includes('Tron') || net.includes('BNB') || net.includes('Ethereum') || net.includes('Polygon') || net.includes('Arbitrum') || net.includes('Solana'))) {
+            mergedAddresses[net] = addr.trim();
+          } else if (w.asset === 'BTC' && net === 'Bitcoin') {
+            mergedAddresses[net] = addr.trim();
+          } else if (w.asset === 'ETH' && (net.includes('Ethereum') || net.includes('Arbitrum'))) {
+            mergedAddresses[net] = addr.trim();
+          } else if (w.asset === 'SOL' && net === 'Solana') {
+            mergedAddresses[net] = addr.trim();
+          }
+        }
+      }
+      return { ...w, addresses: mergedAddresses };
+    });
     saveState(state);
     return {
-      wallets: state.wallets[envParam],
+      wallets: walletsWithMaster,
       summary,
       transactions: state.transactions.filter((t) => t.env === envParam),
       whitelist: state.whitelist,
@@ -760,6 +779,16 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
       txid,
       status,
       created_at: Date.now(),
+    });
+    await recordUserTxInSupabase({
+      env: targetEnv,
+      type: 'DEPOSIT',
+      asset,
+      network: String(body.network || 'Tron (TRC-20)'),
+      amount,
+      txid,
+      address: String(body.address || ''),
+      status,
     });
     saveState(state);
     return {
