@@ -6,16 +6,27 @@ import {
   HistogramSeries,
   ColorType,
   IChartApi,
+  IPriceLine,
   ISeriesApi,
   UTCTimestamp,
 } from 'lightweight-charts';
 import { Candle } from '../types';
+
+export interface ChartPriceLine {
+  id: string;
+  price: number;
+  color: string;
+  title: string;
+  lineStyle?: number;
+  lineWidth?: 1 | 2 | 3 | 4;
+}
 
 interface Props {
   candles: Candle[];
   showEma?: boolean;
   showBollinger?: boolean;
   height?: number;
+  priceLines?: ChartPriceLine[];
 }
 
 function calcEmaSeries(candles: Candle[], period: number) {
@@ -42,10 +53,17 @@ function calcBollinger(candles: Candle[], period = 20) {
   return { upper, lower };
 }
 
-export function CandlestickChart({ candles, showEma = true, showBollinger = false, height = 380 }: Props) {
+export function CandlestickChart({
+  candles,
+  showEma = true,
+  showBollinger = false,
+  height = 380,
+  priceLines = [],
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const priceLineRefs = useRef<IPriceLine[]>([]);
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const ema9Ref = useRef<ISeriesApi<'Line'> | null>(null);
   const ema21Ref = useRef<ISeriesApi<'Line'> | null>(null);
@@ -193,5 +211,44 @@ export function CandlestickChart({ candles, showEma = true, showBollinger = fals
     }
   }, [candles, showEma, showBollinger]);
 
-  return <div ref={containerRef} className="w-full overflow-hidden rounded-lg bg-[#0D1119]" style={{ height }} />;
+  // Draw open orders, Stop Limit triggers, and positions directly on the candlestick chart
+  useEffect(() => {
+    const series = candleSeriesRef.current;
+    if (!series) return;
+
+    // Clear previous price lines
+    for (const pl of priceLineRefs.current) {
+      try {
+        series.removePriceLine(pl);
+      } catch {
+        // ignore if chart already disposed
+      }
+    }
+    priceLineRefs.current = [];
+
+    for (const line of priceLines) {
+      if (!Number.isFinite(line.price) || line.price <= 0) continue;
+      try {
+        const created = series.createPriceLine({
+          price: line.price,
+          color: line.color,
+          lineWidth: line.lineWidth ?? 2,
+          lineStyle: line.lineStyle ?? 0,
+          axisLabelVisible: true,
+          title: line.title,
+        });
+        priceLineRefs.current.push(created);
+      } catch {
+        // ignore invalid line
+      }
+    }
+  }, [priceLines, candles]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="pukun-chart-watermark w-full overflow-hidden rounded-lg bg-[#0D1119]"
+      style={{ height }}
+    />
+  );
 }

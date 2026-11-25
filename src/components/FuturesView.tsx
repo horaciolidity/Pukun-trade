@@ -3,7 +3,7 @@ import { AlertTriangle, Calculator } from 'lucide-react';
 import { apiFetch, formatCurrency, formatPrice } from '../api';
 import { triggerTradeResultFx } from './TradeResultFx';
 import { Candle, FuturesPosition, Market, TradingEnv, WalletItem } from '../types';
-import { CandlestickChart } from './CandlestickChart';
+import { CandlestickChart, ChartPriceLine } from './CandlestickChart';
 
 interface Props {
   env: TradingEnv;
@@ -114,6 +114,48 @@ export function FuturesView({ env, markets, selectedSymbol, wallets, positions, 
   const openPositions = positions.filter((p) => p.status === 'OPEN');
   const closedPositions = positions.filter((p) => p.status !== 'OPEN');
 
+  const futuresChartLines: ChartPriceLine[] = [];
+  for (const p of openPositions.filter((pos) => pos.market_symbol === currentMarket?.symbol)) {
+    futuresChartLines.push({
+      id: `fut_entry_${p.id}`,
+      price: p.entry_price,
+      color: p.side === 'LONG' ? '#10B981' : '#EF4444',
+      title: `${p.side} ${p.leverage}x ENTRY · ${p.qty}`,
+      lineStyle: 0,
+      lineWidth: 2,
+    });
+    if (p.liq_price > 0) {
+      futuresChartLines.push({
+        id: `fut_liq_${p.id}`,
+        price: p.liq_price,
+        color: '#F59E0B',
+        title: `LIQ ${p.side}`,
+        lineStyle: 2,
+        lineWidth: 1,
+      });
+    }
+    if (p.take_profit > 0) {
+      futuresChartLines.push({
+        id: `fut_tp_${p.id}`,
+        price: p.take_profit,
+        color: '#22D3EE',
+        title: `TP`,
+        lineStyle: 2,
+        lineWidth: 1,
+      });
+    }
+    if (p.stop_loss > 0) {
+      futuresChartLines.push({
+        id: `fut_sl_${p.id}`,
+        price: p.stop_loss,
+        color: '#F97316',
+        title: `SL`,
+        lineStyle: 2,
+        lineWidth: 1,
+      });
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Liquidation Risk Warning */}
@@ -167,7 +209,7 @@ export function FuturesView({ env, markets, selectedSymbol, wallets, positions, 
       {/* Chart + Futures Ticket */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
         <div className="xl:col-span-8 rounded-xl border border-white/10 bg-[#111520] p-4">
-          <CandlestickChart candles={candles} showEma={true} height={400} />
+          <CandlestickChart candles={candles} showEma={true} height={400} priceLines={futuresChartLines} />
         </div>
 
         <div className="xl:col-span-4 rounded-xl border border-white/10 bg-[#111520] p-5 space-y-4">

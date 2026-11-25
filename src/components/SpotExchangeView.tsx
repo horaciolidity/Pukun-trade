@@ -10,7 +10,7 @@ import {
   TradingEnv,
   WalletItem,
 } from '../types';
-import { CandlestickChart } from './CandlestickChart';
+import { CandlestickChart, ChartPriceLine } from './CandlestickChart';
 
 interface Props {
   env: TradingEnv;
@@ -144,6 +144,83 @@ export function SpotExchangeView({
       setQty((maxUsdt / effectivePrice).toFixed(currentMarket.qty_precision));
     } else {
       setQty((baseBalance * (pct / 100)).toFixed(currentMarket.qty_precision));
+    }
+  }
+
+  const symbolOpenOrders = orders.filter(
+    (o) => o.status === 'OPEN' && o.market_symbol === currentMarket?.symbol
+  );
+
+  const chartPriceLines: ChartPriceLine[] = [];
+
+  // 1. Open Spot Orders (Limit, Stop Limit, Stop Loss, Take Profit, OCO)
+  for (const ord of symbolOpenOrders) {
+    const isBuy = ord.side === 'BUY';
+    if (ord.price > 0) {
+      chartPriceLines.push({
+        id: `ord_${ord.id}`,
+        price: ord.price,
+        color: isBuy ? '#10B981' : '#EF4444',
+        title: `${ord.side} ${ord.type} · ${ord.qty} ${base}`,
+        lineStyle: 0,
+        lineWidth: 2,
+      });
+    }
+    if (ord.stop_price > 0) {
+      chartPriceLines.push({
+        id: `stop_${ord.id}`,
+        price: ord.stop_price,
+        color: '#F59E0B',
+        title: `STOP TRIGGER (${ord.side}) · ${ord.qty} ${base}`,
+        lineStyle: 2,
+        lineWidth: 2,
+      });
+    }
+  }
+
+  // 2. Average Spot Entry Position from filled BUY orders on this pair
+  const filledBuys = orders.filter(
+    (o) => o.status === 'FILLED' && o.side === 'BUY' && o.market_symbol === currentMarket?.symbol && o.price > 0
+  );
+  if (filledBuys.length > 0 && baseBalance > 0) {
+    const totalQty = filledBuys.reduce((acc, o) => acc + o.qty, 0);
+    const avgEntry =
+      totalQty > 0 ? filledBuys.reduce((acc, o) => acc + o.price * o.qty, 0) / totalQty : 0;
+    if (avgEntry > 0) {
+      chartPriceLines.push({
+        id: `pos_avg_${currentMarket?.symbol}`,
+        price: Number(avgEntry.toFixed(currentMarket?.price_precision ?? 2)),
+        color: '#22D3EE',
+        title: `POSICIÓN SPOT · ${baseBalance.toFixed(4)} ${base}`,
+        lineStyle: 1,
+        lineWidth: 1,
+      });
+    }
+  }
+
+  // 3. Live Preview lines while typing Limit / Stop Price before submitting
+  if (terminalMode === 'PRO' && orderType !== 'MARKET') {
+    const lpNum = Number(limitPrice);
+    if (Number.isFinite(lpNum) && lpNum > 0) {
+      chartPriceLines.push({
+        id: 'preview_limit',
+        price: lpNum,
+        color: side === 'BUY' ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)',
+        title: `PREVIEW ${side} ${orderType}`,
+        lineStyle: 3,
+        lineWidth: 1,
+      });
+    }
+    const spNum = Number(stopPrice);
+    if (Number.isFinite(spNum) && spNum > 0) {
+      chartPriceLines.push({
+        id: 'preview_stop',
+        price: spNum,
+        color: 'rgba(245, 158, 11, 0.85)',
+        title: `PREVIEW STOP TRIGGER`,
+        lineStyle: 3,
+        lineWidth: 1,
+      });
     }
   }
 
@@ -335,7 +412,7 @@ export function SpotExchangeView({
                 ))}
               </div>
             </div>
-            <CandlestickChart candles={candles} showEma={true} height={360} />
+            <CandlestickChart candles={candles} showEma={true} height={360} priceLines={chartPriceLines} />
           </div>
         </div>
       ) : (
@@ -380,7 +457,44 @@ export function SpotExchangeView({
               </div>
             </div>
 
-            <CandlestickChart candles={candles} showEma={showEma} showBollinger={showBb} height={370} />
+            <CandlestickChart
+              candles={candles}
+              showEma={showEma}
+              showBollinger={showBb}
+              height={370}
+              priceLines={chartPriceLines}
+            />
+
+            {symbolOpenOrders.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-300/90">
+                  En gráfico ({symbolOpenOrders.length}):
+                </span>
+                {symbolOpenOrders.map((ord) => (
+                  <span
+                    key={ord.id}
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-mono ${
+                      ord.side === 'BUY'
+                        ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300'
+                        : 'border-red-500/35 bg-red-500/10 text-red-300'
+                    }`}
+                  >
+                    <span>
+                      {ord.side} {ord.type} {ord.qty} {base} @ ${formatPrice(ord.price)}
+                      {ord.stop_price > 0 ? ` (Stop $${formatPrice(ord.stop_price)})` : ''}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCancelOrder(ord.id)}
+                      className="text-slate-300 hover:text-white font-bold cursor-pointer"
+                      title="Cancelar orden"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
 
             {indicators && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 text-xs font-mono tabular-nums">
