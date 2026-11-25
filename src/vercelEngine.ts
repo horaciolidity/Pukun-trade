@@ -1,4 +1,5 @@
 import { DEFAULT_MARKETS } from './defaultMarkets';
+import { computeQuickTradeSettlement } from './utils/quickTradeMath';
 import type {
   AdminFutureEvent,
   AdminPlatformFees,
@@ -518,30 +519,39 @@ function computeWalletSummary(state: EngineState, env: TradingEnv) {
   };
 }
 
-async function settleExpiredQuickTrades(state: EngineState) {
+async function settleExpiredQuickTrades(state: EngineState, priceHint?: { symbol: string; price: number }) {
   const now = Date.now();
   let changed = false;
   for (const qt of state.quickTrades) {
     if (qt.status === 'ACTIVE' && now >= qt.expires_at) {
-      const closePrice = await getLivePrice(qt.symbol, state);
+      const live =
+        priceHint && priceHint.symbol === qt.symbol && priceHint.price > 0
+          ? priceHint.price
+          : await getLivePrice(qt.symbol, state);
       const finalPrice =
-        closePrice === qt.entry_price ? closePrice * (Math.random() > 0.45 ? 1.0003 : 0.9997) : closePrice;
-      const won =
-        (qt.direction === 'UP' && finalPrice > qt.entry_price) ||
-        (qt.direction === 'DOWN' && finalPrice < qt.entry_price);
+        live === qt.entry_price ? live * (Math.random() > 0.48 ? 1.00025 : 0.99975) : live;
+
+      const settlement = computeQuickTradeSettlement({
+        direction: qt.direction,
+        amount: qt.amount,
+        entryPrice: qt.entry_price,
+        closePrice: finalPrice,
+        payoutPct: qt.payout_pct,
+        createdAt: qt.created_at,
+        expiresAt: qt.expires_at,
+        settledAt: now,
+      });
+
       qt.close_price = Number(finalPrice.toFixed(6));
       qt.closed_at = now;
-      if (won) {
-        const profit = Number(((qt.amount * qt.payout_pct) / 100).toFixed(2));
-        qt.status = 'WON';
-        qt.profit = profit;
-        qt.return_pct = qt.payout_pct;
+      qt.status = settlement.status;
+      qt.profit = settlement.profit;
+      qt.return_pct = settlement.returnPct;
+
+      // Credit back exact returnAmount (stake + profit; on partial loss, returns remaining uncompromised stake!)
+      if (settlement.returnAmount > 0) {
         const usdtW = getOrCreateWallet(state, qt.env, 'USDT', 1);
-        usdtW.available = Number((usdtW.available + qt.amount + profit).toFixed(4));
-      } else {
-        qt.status = 'LOST';
-        qt.profit = -qt.amount;
-        qt.return_pct = -100;
+        usdtW.available = Number((usdtW.available + settlement.returnAmount).toFixed(4));
       }
       changed = true;
     }
@@ -957,7 +967,12 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
 
   // 6. Quick Trading Pro (History, Open, Cancel & Auto-Settle)
   if (pathname === '/api/quick-trade/history' && method === 'GET') {
-    await settleExpiredQuickTrades(state);
+    const hintSym = params.get('sym') || '';
+    const hintPrice = Number(params.get('price') || 0);
+    await settleExpiredQuickTrades(
+      state,
+      hintSym && hintPrice > 0 ? { symbol: hintSym, price: hintPrice } : undefined
+    );
     return {
       trades: state.quickTrades.filter((t) => t.env === envParam),
       config: state.config.quickTrading,

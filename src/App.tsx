@@ -766,6 +766,8 @@ export default function App() {
               markets={markets}
               selectedSymbol={selectedSymbol}
               wallets={wallets}
+              referralCode={user.referral_code}
+              referralRewardUsdt={referralRewardUsdt}
               onChangeSymbol={setSelectedSymbol}
               onSettled={() => loadUserEnvData(env)}
             />

@@ -79,8 +79,9 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
+  const [sharedTradeBanner, setSharedTradeBanner] = useState<{ symbol: string; pnl: number; roi?: string } | null>(null);
 
-  // Auto-detect ?ref=CODE in URL so shared referral links pre-fill registration
+  // Auto-detect ?ref=CODE (& optional shared trade PnL preview) in URL
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -88,6 +89,18 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
       if (ref && ref.trim()) {
         setReferralCode(ref.trim().toUpperCase());
         setAuthMode('register');
+      }
+      const sharedSym = params.get('trade');
+      const sharedPnl = params.get('pnl');
+      if (sharedSym && sharedPnl) {
+        const pnlNum = Number(sharedPnl);
+        if (Number.isFinite(pnlNum)) {
+          setSharedTradeBanner({
+            symbol: sharedSym,
+            pnl: pnlNum,
+            roi: params.get('roi') || undefined,
+          });
+        }
       }
     } catch {
       // ignore URL parsing errors
@@ -304,6 +317,25 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
 
             {/* Auth Card — Registro / Login Obligatorio */}
             <div id="acceso" className="lg:col-span-5">
+              {sharedTradeBanner && (
+                <div className="mb-3 rounded-2xl border border-emerald-400/40 bg-emerald-500/12 p-3.5 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                      Operación Compartida por Invitación
+                    </div>
+                    <div className="text-xs text-white font-semibold mt-0.5">
+                      {sharedTradeBanner.symbol}{' '}
+                      <span className={sharedTradeBanner.pnl >= 0 ? 'text-emerald-400 font-mono' : 'text-red-400 font-mono'}>
+                        {sharedTradeBanner.pnl >= 0 ? '+' : '-'}${Math.abs(sharedTradeBanner.pnl).toFixed(2)} USDT
+                        {sharedTradeBanner.roi ? ` (${sharedTradeBanner.roi}%)` : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="rounded-lg bg-amber-500/20 border border-amber-400/40 px-2.5 py-1 text-[10px] font-bold text-amber-300 shrink-0">
+                    Bono 40 USDT
+                  </span>
+                </div>
+              )}
               <div className="rounded-2xl border border-amber-500/20 bg-[#111520]/95 backdrop-blur-xl p-6 sm:p-7 shadow-2xl shadow-black/50">
                 <div className="flex items-center gap-3 mb-5 pb-4 border-b border-white/8">
                   <img

@@ -8,6 +8,7 @@ import {
   Flame,
   Layers,
   Radio,
+  Share2,
   ShieldAlert,
   Sparkles,
   TrendingDown,
@@ -40,12 +41,15 @@ import {
 import { QuickTradePnlChart } from './QuickTradePnlChart';
 import { ChartIndicatorsToggle, PulsePoint, QuickTradePulseChart } from './QuickTradePulseChart';
 import { QuickTradeStatsAndHistory } from './QuickTradeStatsAndHistory';
+import { ShareTradeModal, ShareTradePayload } from './ShareTradeModal';
 
 interface Props {
   env: TradingEnv;
   markets: Market[];
   selectedSymbol: string;
   wallets: WalletItem[];
+  referralCode?: string;
+  referralRewardUsdt?: number;
   onChangeSymbol: (symbol: string) => void;
   onSettled: () => void;
 }
@@ -100,7 +104,16 @@ function seedPulseFromCandles(candles: Candle[]): PulsePoint[] {
   return result;
 }
 
-export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChangeSymbol, onSettled }: Props) {
+export function QuickTradingView({
+  env,
+  markets,
+  selectedSymbol,
+  wallets,
+  referralCode = 'PUKUN-40USDT',
+  referralRewardUsdt = 40,
+  onChangeSymbol,
+  onSettled,
+}: Props) {
   const currentMarket = useMemo(
     () => markets.find((m) => m.symbol === selectedSymbol) || markets[0],
     [markets, selectedSymbol]
@@ -145,6 +158,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
   const [error, setError] = useState('');
   const [hoverDirection, setHoverDirection] = useState<'UP' | 'DOWN' | null>(null);
   const [lastClosedTrade, setLastClosedTrade] = useState<QuickTradeItem | null>(null);
+  const [shareTrade, setShareTrade] = useState<ShareTradePayload | null>(null);
+  const latestPriceRef = useRef<number>(0);
 
   // Live Active Trade PnL Trajectory Buffer (for Requirement 3 smooth curve + 1s delta)
   const [activePnlPoints, setActivePnlPoints] = useState<QuickTradePnlPoint[]>([]);
@@ -185,8 +200,12 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
   const loadHistoryAndConfig = useCallback(async () => {
     try {
       const fetchEnv = accountFilter === 'CURRENT' ? env : accountFilter;
+      const hintQs =
+        latestPriceRef.current > 0
+          ? `&sym=${encodeURIComponent(selectedSymRef.current)}&price=${encodeURIComponent(String(latestPriceRef.current))}`
+          : '';
       const res = await apiFetch<{ trades: QuickTradeItem[]; config?: Partial<QuickTradeConfig> }>(
-        `/api/quick-trade/history?env=${fetchEnv}`
+        `/api/quick-trade/history?env=${fetchEnv}${hintQs}`
       );
       if (Array.isArray(res.trades)) {
         const prevActiveIds = new Set(historyRef.current.filter((t) => t.status === 'ACTIVE').map((t) => t.id));
@@ -373,6 +392,7 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
         momentum = momentum * 0.55 + (Math.random() - 0.5) * anchorPrice * 0.00028;
         microPrice = Math.max(anchorPrice * 0.5, microPrice + pullToAnchor + momentum);
         const rounded = Number(microPrice.toFixed(anchorPrice > 100 ? 2 : anchorPrice > 1 ? 4 : 6));
+        latestPriceRef.current = rounded;
         setLastTickReceivedAt(Date.now());
         setLiveMarketPatch((prev) => ({
           ...(prev || { change_24h: 0, high_24h: rounded, low_24h: rounded, price_source: 'BINANCE_LIVE' }),
@@ -1603,6 +1623,31 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
                   Máx -: -${Math.abs(Number(lastClosedTrade.max_negative_pnl || 0)).toFixed(2)}
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShareTrade({
+                    symbol: lastClosedTrade.symbol,
+                    direction: lastClosedTrade.direction,
+                    entryPrice: lastClosedTrade.entry_price,
+                    closePrice: lastClosedTrade.close_price || lastClosedTrade.entry_price,
+                    profit: lastClosedTrade.profit,
+                    returnPct:
+                      lastClosedTrade.return_pct !== undefined
+                        ? lastClosedTrade.return_pct
+                        : lastClosedTrade.amount > 0
+                          ? (lastClosedTrade.profit / lastClosedTrade.amount) * 100
+                          : 0,
+                    amount: lastClosedTrade.amount,
+                    modeLabel: 'QUICK TRADING PRO',
+                  })
+                }
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-amber-500/20 to-cyan-500/20 hover:from-amber-500/30 hover:to-cyan-500/30 border border-amber-400/40 py-2 text-xs font-bold text-amber-200 transition-all cursor-pointer"
+              >
+                <Share2 className="h-3.5 w-3.5 text-amber-400" />
+                <span>Compartir Operación con PnL + Referido</span>
+              </button>
             </div>
           ) : (
             <div className="rounded-xl border border-white/10 bg-[#111520] px-4 py-3 flex items-center justify-between">
@@ -1750,6 +1795,12 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
         onAccountFilterChange={setAccountFilter}
         thermalColors={tColors}
         animationsEnabled={animOn}
+      />
+      <ShareTradeModal
+        trade={shareTrade}
+        referralCode={referralCode}
+        referralRewardUsdt={referralRewardUsdt}
+        onClose={() => setShareTrade(null)}
       />
     </div>
   );
