@@ -244,6 +244,48 @@ export interface MarketIntelItem {
   created_at: number;
 }
 
+export type TokenMovementProfile = 'STABLECOIN' | 'CALM' | 'NORMAL' | 'VOLATILE';
+export type TokenTrendBias = 'NEUTRAL' | 'BULLISH' | 'BEARISH';
+
+export interface TokenBehaviorSchedule {
+  id: string;
+  startTime: string;
+  endTime: string;
+  profile: TokenMovementProfile;
+  bias: TokenTrendBias;
+  label?: string;
+}
+
+export interface AdminPromoBanner {
+  id: string;
+  badge: string;
+  title: string;
+  subtitle: string;
+  ctaText: string;
+  targetTab: NavSection;
+  imageUrl: string;
+  active: boolean;
+  createdAt: number;
+}
+
+export interface AdminFutureEvent {
+  id: string;
+  title: string;
+  rewardUsdt: number;
+  startDate: string;
+  endDate: string;
+  description: string;
+  active: boolean;
+}
+
+export interface AdminPlatformFees {
+  spotMakerPct: number;
+  spotTakerPct: number;
+  futuresFeePct: number;
+  withdrawFeeUsdt: number;
+  withdrawFeePct: number;
+}
+
 export interface CustomToken {
   id: string;
   name: string;
@@ -268,6 +310,8 @@ export interface CustomToken {
   listed_on_exchange: number;
   launchpad_status: string;
   initial_price_usdt: number;
+  movement_profile?: TokenMovementProfile;
+  movement_schedules?: TokenBehaviorSchedule[];
   created_at: number;
 }
 

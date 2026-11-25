@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Plus, Check, X, Download, RotateCcw } from 'lucide-react';
+import { ShieldCheck, Plus, Check, X, Download, RotateCcw, Percent, Megaphone, Gift, Calendar, Trash2 } from 'lucide-react';
 import { apiFetch, formatCurrency, formatPrice, getStoredToken } from '../api';
-import { Market, NavSection, QuickTradeItem, UserRole } from '../types';
+import {
+  AdminFutureEvent,
+  AdminPlatformFees,
+  AdminPromoBanner,
+  Market,
+  NavSection,
+  QuickTradeItem,
+  UserRole,
+} from '../types';
 import {
   DEFAULT_THERMAL_COLORS,
   formatDurationLabel,
@@ -63,6 +71,9 @@ interface AdminOverview {
     quick_trading: QuickTradeConfig;
     referral_settings: { inviteRewardUsdt: number; firstDepositBonusPct: number; commissionPct: number; maxMonthlyRewardsUsdt: number };
     enabled_modules: Record<string, boolean>;
+    fees?: AdminPlatformFees;
+    promo_banners?: AdminPromoBanner[];
+    future_events?: AdminFutureEvent[];
   };
   stats: {
     totalUsers: number;
@@ -84,6 +95,7 @@ interface AdminQuickTradesData {
 }
 
 const ADMIN_TABS = [
+  { id: 'pukun_control', label: 'Comisiones, Banners & Eventos' },
   { id: 'stats', label: 'Estadísticas & Auditoría' },
   { id: 'users', label: 'Usuarios & Roles' },
   { id: 'finance', label: 'Finanzas & Wallet' },
@@ -96,9 +108,29 @@ const ADMIN_TABS = [
 ];
 
 export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRefresh }: Props) {
-  const [tab, setTab] = useState('stats');
+  const [tab, setTab] = useState('pukun_control');
   const [data, setData] = useState<AdminOverview | null>(null);
   const [qtDraft, setQtDraft] = useState<QuickTradeConfig | null>(null);
+  const [feesDraft, setFeesDraft] = useState<AdminPlatformFees>({
+    spotMakerPct: 0.08,
+    spotTakerPct: 0.1,
+    futuresFeePct: 0.05,
+    withdrawFeeUsdt: 1.5,
+    withdrawFeePct: 0.1,
+  });
+  const [refRewardDraft, setRefRewardDraft] = useState(40);
+  const [refCommDraft, setRefCommDraft] = useState(20);
+  const [bannerTitle, setBannerTitle] = useState('');
+  const [bannerSubtitle, setBannerSubtitle] = useState('');
+  const [bannerBadge, setBannerBadge] = useState('PROMO PUKUN');
+  const [bannerCta, setBannerCta] = useState('Probar Ahora');
+  const [bannerTarget, setBannerTarget] = useState<NavSection>('quick-trade');
+  const [bannerImage, setBannerImage] = useState('/banner-trading.jpg');
+  const [evtTitle, setEvtTitle] = useState('');
+  const [evtReward, setEvtReward] = useState('1000');
+  const [evtStart, setEvtStart] = useState('2026-12-01');
+  const [evtEnd, setEvtEnd] = useState('2026-12-31');
+  const [evtDesc, setEvtDesc] = useState('');
   const [qtEnvFilter, setQtEnvFilter] = useState<'ALL' | 'DEMO' | 'REAL'>('ALL');
   const [qtAdminData, setQtAdminData] = useState<AdminQuickTradesData | null>(null);
   const [newPair, setNewPair] = useState('');
@@ -111,6 +143,11 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
       const res = await apiFetch<AdminOverview>('/api/superadmin/overview');
       setData(res);
       setQtDraft(mergeQuickTradeConfig(res.configs.quick_trading));
+      if (res.configs.fees) setFeesDraft(res.configs.fees);
+      if (res.configs.referral_settings) {
+        setRefRewardDraft(res.configs.referral_settings.inviteRewardUsdt ?? 40);
+        setRefCommDraft(res.configs.referral_settings.commissionPct ?? 20);
+      }
     } catch {
       // ignore
     }
@@ -962,6 +999,341 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'pukun_control' && (
+        <div className="space-y-6">
+          {/* 1. Commissions & Referral Rewards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="rounded-xl border border-amber-500/25 bg-[#111520] p-5 space-y-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-amber-300">
+                <Percent className="h-4 w-4" />
+                <span>Comisiones de Trades y Retiros</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                <div>
+                  <label className="block text-slate-400 mb-1">Spot Maker (%)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={feesDraft.spotMakerPct}
+                    onChange={(e) => setFeesDraft({ ...feesDraft, spotMakerPct: Number(e.target.value) })}
+                    className="w-full rounded-lg border border-white/10 bg-[#090B10] px-2.5 py-2 font-mono text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Spot Taker (%)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={feesDraft.spotTakerPct}
+                    onChange={(e) => setFeesDraft({ ...feesDraft, spotTakerPct: Number(e.target.value) })}
+                    className="w-full rounded-lg border border-white/10 bg-[#090B10] px-2.5 py-2 font-mono text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Futuros (%)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={feesDraft.futuresFeePct}
+                    onChange={(e) => setFeesDraft({ ...feesDraft, futuresFeePct: Number(e.target.value) })}
+                    className="w-full rounded-lg border border-white/10 bg-[#090B10] px-2.5 py-2 font-mono text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Retiro Fijo (USDT)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={feesDraft.withdrawFeeUsdt}
+                    onChange={(e) => setFeesDraft({ ...feesDraft, withdrawFeeUsdt: Number(e.target.value) })}
+                    className="w-full rounded-lg border border-white/10 bg-[#090B10] px-2.5 py-2 font-mono text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Retiro Variable (%)</label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    value={feesDraft.withdrawFeePct}
+                    onChange={(e) => setFeesDraft({ ...feesDraft, withdrawFeePct: Number(e.target.value) })}
+                    className="w-full rounded-lg border border-white/10 bg-[#090B10] px-2.5 py-2 font-mono text-white"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => updateConfig('fees', feesDraft)}
+                className="rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 cursor-pointer"
+              >
+                Guardar Comisiones Globales
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-cyan-500/25 bg-[#111520] p-5 space-y-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-cyan-300">
+                <Gift className="h-4 w-4" />
+                <span>Premios de Referidos (Se refleja en Header y Banners)</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block text-slate-400 mb-1">Premio por Referido (USDT)</label>
+                  <input
+                    type="number"
+                    value={refRewardDraft}
+                    onChange={(e) => setRefRewardDraft(Number(e.target.value))}
+                    className="w-full rounded-lg border border-white/10 bg-[#090B10] px-2.5 py-2 font-mono text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Comisión por Trades (%)</label>
+                  <input
+                    type="number"
+                    value={refCommDraft}
+                    onChange={(e) => setRefCommDraft(Number(e.target.value))}
+                    className="w-full rounded-lg border border-white/10 bg-[#090B10] px-2.5 py-2 font-mono text-white"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  updateConfig('referral_settings', {
+                    ...data.configs.referral_settings,
+                    inviteRewardUsdt: refRewardDraft,
+                    commissionPct: refCommDraft,
+                  })
+                }
+                className="rounded-lg bg-cyan-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-400 cursor-pointer"
+              >
+                Actualizar Premio de Referidos
+              </button>
+            </div>
+          </div>
+
+          {/* 2. Dynamic Promo Banners Manager */}
+          <div className="rounded-xl border border-white/10 bg-[#111520] p-5 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-white">
+              <Megaphone className="h-4 w-4 text-amber-400" />
+              <span>Gestor de Banners Publicitarios (Visibles en Dashboard)</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <input
+                type="text"
+                value={bannerBadge}
+                onChange={(e) => setBannerBadge(e.target.value)}
+                placeholder="Etiqueta (ej. NUEVO EVENTO)"
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+              <input
+                type="text"
+                value={bannerTitle}
+                onChange={(e) => setBannerTitle(e.target.value)}
+                placeholder="Título del Banner..."
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+              <input
+                type="text"
+                value={bannerSubtitle}
+                onChange={(e) => setBannerSubtitle(e.target.value)}
+                placeholder="Subtítulo breve..."
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+              <input
+                type="text"
+                value={bannerCta}
+                onChange={(e) => setBannerCta(e.target.value)}
+                placeholder="Texto del botón (ej. Probar Ahora)"
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+              <select
+                value={bannerTarget}
+                onChange={(e) => setBannerTarget(e.target.value as NavSection)}
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              >
+                <option value="quick-trade">Ir a Quick Trading</option>
+                <option value="futures">Ir a Futuros 125x</option>
+                <option value="spot">Ir a Spot</option>
+                <option value="bots">Ir a Bots IA</option>
+                <option value="referrals">Ir a Referidos</option>
+                <option value="launchpad">Ir a Launchpad</option>
+              </select>
+              <select
+                value={bannerImage}
+                onChange={(e) => setBannerImage(e.target.value)}
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              >
+                <option value="/og-ref-40usdt.jpg">Arte: Referidos 40 USDT</option>
+                <option value="/banner-trading.jpg">Arte: Trading Pro</option>
+                <option value="/banner-bots.jpg">Arte: Bots IA</option>
+                <option value="/banner-wallet.jpg">Arte: Wallet Vault</option>
+                <option value="/banner-launchpad.jpg">Arte: Launchpad</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (!bannerTitle.trim()) return;
+                const current = data.configs.promo_banners || [];
+                const next: AdminPromoBanner[] = [
+                  {
+                    id: `promo_${Date.now()}`,
+                    badge: bannerBadge,
+                    title: bannerTitle,
+                    subtitle: bannerSubtitle,
+                    ctaText: bannerCta || 'Ver más',
+                    targetTab: bannerTarget,
+                    imageUrl: bannerImage,
+                    active: true,
+                    createdAt: Date.now(),
+                  },
+                  ...current,
+                ];
+                updateConfig('promo_banners', next);
+                setBannerTitle('');
+                setBannerSubtitle('');
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Publicar Nuevo Banner</span>
+            </button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+              {(data.configs.promo_banners || []).map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#090B10] p-3 text-xs"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img src={b.imageUrl} alt={b.title} className="h-12 w-20 rounded-lg object-cover shrink-0" />
+                    <div className="min-w-0">
+                      <div className="font-bold text-white truncate">{b.title}</div>
+                      <div className="text-[10px] text-slate-400 truncate">{b.badge} · Destino: {b.targetTab}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateConfig(
+                        'promo_banners',
+                        (data.configs.promo_banners || []).filter((x) => x.id !== b.id)
+                      )
+                    }
+                    className="text-red-400 hover:text-red-300 cursor-pointer shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 3. Future Events & Prizes Manager */}
+          <div className="rounded-xl border border-white/10 bg-[#111520] p-5 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-white">
+              <Calendar className="h-4 w-4 text-emerald-400" />
+              <span>Eventos Futuros y Premios en USDT</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+              <input
+                type="text"
+                value={evtTitle}
+                onChange={(e) => setEvtTitle(e.target.value)}
+                placeholder="Nombre del Evento..."
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+              <input
+                type="number"
+                value={evtReward}
+                onChange={(e) => setEvtReward(e.target.value)}
+                placeholder="Premio USDT"
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 font-mono text-white"
+              />
+              <input
+                type="date"
+                value={evtStart}
+                onChange={(e) => setEvtStart(e.target.value)}
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+              <input
+                type="date"
+                value={evtEnd}
+                onChange={(e) => setEvtEnd(e.target.value)}
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 text-xs">
+              <input
+                type="text"
+                value={evtDesc}
+                onChange={(e) => setEvtDesc(e.target.value)}
+                placeholder="Descripción y reglas del premio..."
+                className="flex-1 rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!evtTitle.trim()) return;
+                  const current = data.configs.future_events || [];
+                  const next: AdminFutureEvent[] = [
+                    {
+                      id: `evt_${Date.now()}`,
+                      title: evtTitle,
+                      rewardUsdt: Number(evtReward || 500),
+                      startDate: evtStart,
+                      endDate: evtEnd,
+                      description: evtDesc,
+                      active: true,
+                    },
+                    ...current,
+                  ];
+                  updateConfig('future_events', next);
+                  setEvtTitle('');
+                  setEvtDesc('');
+                }}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 cursor-pointer shrink-0"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Crear Evento</span>
+              </button>
+            </div>
+            <div className="space-y-2">
+              {(data.configs.future_events || []).map((ev) => (
+                <div
+                  key={ev.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#090B10] px-4 py-3 text-xs"
+                >
+                  <div>
+                    <div className="font-bold text-white">
+                      {ev.title}{' '}
+                      <span className="ml-2 rounded bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] text-emerald-300">
+                        Premio: ${formatCurrency(ev.rewardUsdt)} USDT
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      {ev.startDate} ➔ {ev.endDate} · {ev.description}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateConfig(
+                        'future_events',
+                        (data.configs.future_events || []).filter((x) => x.id !== ev.id)
+                      )
+                    }
+                    className="text-red-400 hover:text-red-300 cursor-pointer shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

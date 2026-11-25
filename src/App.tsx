@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { apiFetch, getStoredToken, setStoredToken } from './api';
 import {
+  AdminFutureEvent,
+  AdminPromoBanner,
   AppNotification,
   ChatMessage,
   CustomToken,
@@ -43,6 +45,7 @@ import {
   WalletItem,
   WalletTransaction,
 } from './types';
+import { TradeResultFx } from './components/TradeResultFx';
 import { LandingAuth } from './components/LandingAuth';
 import { DEFAULT_MARKETS } from './defaultMarkets';
 import { getCurrentSupabaseUser, isSupabaseConfigured, supabase, createDemoWallets } from './supabase';
@@ -81,6 +84,9 @@ export default function App() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [enabledModules, setEnabledModules] = useState<Record<string, boolean>>({});
   const [brandingName, setBrandingName] = useState('PUKUN TRADE');
+  const [promoBanners, setPromoBanners] = useState<AdminPromoBanner[]>([]);
+  const [futureEvents, setFutureEvents] = useState<AdminFutureEvent[]>([]);
+  const [referralRewardUsdt, setReferralRewardUsdt] = useState(40);
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
@@ -103,7 +109,13 @@ export default function App() {
     try {
       const [mktRes, bootRes, sigRes, tokRes] = await Promise.all([
         apiFetch<{ markets: Market[] }>('/api/markets').catch(() => null),
-        apiFetch<{ branding: { name?: string }; modules: Record<string, boolean> }>('/api/bootstrap').catch(() => null),
+        apiFetch<{
+          branding: { name?: string };
+          modules: Record<string, boolean>;
+          promoBanners?: AdminPromoBanner[];
+          futureEvents?: AdminFutureEvent[];
+          referralSettings?: { inviteRewardUsdt?: number };
+        }>('/api/bootstrap').catch(() => null),
         apiFetch<{ signals: LiveSignal[] }>('/api/signals').catch(() => null),
         apiFetch<{ tokens: CustomToken[] }>('/api/tokens').catch(() => null),
       ]);
@@ -114,6 +126,11 @@ export default function App() {
       }
       if (bootRes?.modules && typeof bootRes.modules === 'object') setEnabledModules(bootRes.modules);
       if (bootRes?.branding?.name) setBrandingName(bootRes.branding.name);
+      if (Array.isArray(bootRes?.promoBanners)) setPromoBanners(bootRes.promoBanners);
+      if (Array.isArray(bootRes?.futureEvents)) setFutureEvents(bootRes.futureEvents);
+      if (bootRes?.referralSettings?.inviteRewardUsdt) {
+        setReferralRewardUsdt(bootRes.referralSettings.inviteRewardUsdt);
+      }
       if (Array.isArray(sigRes?.signals)) setSignals(sigRes.signals);
       if (Array.isArray(tokRes?.tokens)) setTokens(tokRes.tokens);
     } catch {
@@ -465,7 +482,8 @@ export default function App() {
   const sidebarItems = rawSidebarItems.filter((item) => !item.modKey || enabledModules[item.modKey] !== false);
 
   return (
-    <div className="min-h-screen bg-[#090B10] text-slate-100 flex">
+    <div className="min-h-screen pukun-bg-pattern text-slate-100 flex">
+      <TradeResultFx />
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:w-60 xl:w-64 flex-col border-r border-amber-500/15 bg-[#0C0F17] sticky top-0 h-screen shrink-0">
         <div className="px-4 py-3.5 border-b border-white/8 flex items-center gap-3">
@@ -648,7 +666,7 @@ export default function App() {
                       {user.role === 'SUPERADMIN' && <Crown className="h-2.5 w-2.5 text-amber-400 shrink-0" />}
                     </span>
                     <span className="text-[8.5px] sm:text-[9px] text-amber-400/95 font-medium tracking-tight mt-0.5 whitespace-nowrap">
-                      {refCopied ? '¡Enlace copiado!' : 'Gana 40 USDT compartiendo'}
+                      {refCopied ? '¡Enlace copiado!' : `Gana ${referralRewardUsdt} USDT compartiendo`}
                     </span>
                   </div>
                 </button>
@@ -671,6 +689,7 @@ export default function App() {
           </div>
 
           {/* Permanent Active Environment Strip */}
+          <div className="pukun-step-accent w-full opacity-75" />
           <div
             className={`px-4 py-1 text-center text-[11px] font-semibold tracking-wide border-t ${
               env === 'DEMO'
@@ -701,6 +720,8 @@ export default function App() {
               onNavigate={handleNavigate}
               onToggleFavorite={handleToggleFavorite}
               onResetDemo={handleResetDemo}
+              promoBanners={promoBanners}
+              futureEvents={futureEvents}
             />
           )}
 

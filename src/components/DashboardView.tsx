@@ -1,6 +1,8 @@
 import { ArrowUpRight, ArrowDownRight, Bot, Wallet, Star, Zap, BookOpen, TrendingUp, Rocket, Sparkles } from 'lucide-react';
 import { formatCurrency, formatPrice } from '../api';
 import {
+  AdminFutureEvent,
+  AdminPromoBanner,
   ExperienceLevel,
   FuturesPosition,
   LiveSignal,
@@ -23,6 +25,8 @@ interface Props {
   positions: FuturesPosition[];
   bots: TradingBot[];
   signals: LiveSignal[];
+  promoBanners?: AdminPromoBanner[];
+  futureEvents?: AdminFutureEvent[];
   onNavigate: (tab: NavSection, symbol?: string, presetSide?: 'BUY' | 'SELL') => void;
   onToggleFavorite: (symbol: string) => void;
   onResetDemo: () => void;
@@ -38,6 +42,8 @@ export function DashboardView({
   positions,
   bots,
   signals,
+  promoBanners = [],
+  futureEvents = [],
   onNavigate,
   onToggleFavorite,
   onResetDemo,
@@ -117,6 +123,71 @@ export function DashboardView({
           </div>
         </div>
       </div>
+
+      {/* Dynamic Admin Promo Banners & Future Events */}
+      {(promoBanners.some((b) => b.active) || futureEvents.some((e) => e.active)) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {promoBanners
+            .filter((b) => b.active)
+            .slice(0, 2)
+            .map((banner) => (
+              <div
+                key={banner.id}
+                className="relative rounded-2xl border border-amber-400/35 overflow-hidden bg-[#111520] shadow-xl flex items-center justify-between p-4 sm:p-5 gap-4"
+              >
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none"
+                  style={{ backgroundImage: `url('${banner.imageUrl}')` }}
+                />
+                <div className="absolute inset-0 bg-linear-to-r from-[#090B10]/95 via-[#090B10]/80 to-transparent pointer-events-none" />
+                <div className="relative space-y-1 min-w-0">
+                  <span className="inline-block rounded-full bg-amber-500/20 border border-amber-400/40 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+                    {banner.badge}
+                  </span>
+                  <h3 className="font-display text-sm sm:text-base font-bold text-white">{banner.title}</h3>
+                  <p className="text-[11px] text-slate-300 line-clamp-2">{banner.subtitle}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigate(banner.targetTab)}
+                  className="relative rounded-xl bg-linear-to-r from-amber-500 to-cyan-500 px-3.5 py-2 text-xs font-bold text-slate-950 whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  {banner.ctaText}
+                </button>
+              </div>
+            ))}
+
+          {futureEvents
+            .filter((e) => e.active)
+            .slice(0, 2)
+            .map((ev) => (
+              <div
+                key={ev.id}
+                className="rounded-2xl border border-cyan-500/30 bg-linear-to-r from-[#111520] via-[#121a2d] to-[#111520] p-4 sm:p-5 flex items-center justify-between gap-4"
+              >
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
+                      EVENTO · PREMIO ${formatCurrency(ev.rewardUsdt)} USDT
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {ev.startDate} → {ev.endDate}
+                    </span>
+                  </div>
+                  <h3 className="font-display text-sm font-bold text-white">{ev.title}</h3>
+                  <p className="text-[11px] text-slate-400 line-clamp-2">{ev.description}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('competitions')}
+                  className="rounded-xl border border-cyan-400/35 bg-cyan-500/15 px-3.5 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-500/25 whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  Participar
+                </button>
+              </div>
+            ))}
+        </div>
+      )}
 
       {/* Beginner Guidance Strip */}
       {experience === 'BEGINNER' && (

@@ -1,5 +1,8 @@
 import { DEFAULT_MARKETS } from './defaultMarkets';
 import type {
+  AdminFutureEvent,
+  AdminPlatformFees,
+  AdminPromoBanner,
   AppNotification,
   Candle,
   ChatMessage,
@@ -12,13 +15,16 @@ import type {
   QuickTradeItem,
   SpotOrder,
   TechnicalIndicators,
+  TokenBehaviorSchedule,
+  TokenMovementProfile,
+  TokenTrendBias,
   TradingBot,
   TradingEnv,
   WalletItem,
   WalletTransaction,
 } from './types';
 
-const STORAGE_KEY = 'pukun_trade_vercel_state_v2';
+const STORAGE_KEY = 'pukun_trade_vercel_state_v3';
 
 interface WhitelistEntry {
   id: string;
@@ -43,6 +49,15 @@ interface EngineState {
   messages: ChatMessage[];
   notifications: AppNotification[];
   favorites: string[];
+  fees: AdminPlatformFees;
+  promoBanners: AdminPromoBanner[];
+  futureEvents: AdminFutureEvent[];
+  referralSettings: {
+    inviteRewardUsdt: number;
+    firstDepositBonusPct: number;
+    commissionPct: number;
+    maxMonthlyRewardsUsdt: number;
+  };
   config: Record<string, unknown>;
 }
 
@@ -261,6 +276,12 @@ function createInitialState(): EngineState {
         listed_on_exchange: 1,
         launchpad_status: 'ACTIVE',
         initial_price_usdt: 1.45,
+        movement_profile: 'NORMAL',
+        movement_schedules: [
+          { id: 'sch_1', startTime: '00:00', endTime: '08:00', profile: 'CALM', bias: 'NEUTRAL', label: 'Sesión Asiática Tranquila' },
+          { id: 'sch_2', startTime: '08:00', endTime: '17:00', profile: 'NORMAL', bias: 'BULLISH', label: 'Apertura Mercado Global' },
+          { id: 'sch_3', startTime: '17:00', endTime: '23:59', profile: 'VOLATILE', bias: 'NEUTRAL', label: 'Alta Volatilidad Nocturna' },
+        ],
         created_at: now - 86400000 * 10,
       },
     ],
@@ -290,7 +311,58 @@ function createInitialState(): EngineState {
       },
     ],
     favorites: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
+    fees: {
+      spotMakerPct: 0.08,
+      spotTakerPct: 0.1,
+      futuresFeePct: 0.05,
+      withdrawFeeUsdt: 1.5,
+      withdrawFeePct: 0.1,
+    },
+    promoBanners: [
+      {
+        id: 'promo_ref_40',
+        badge: 'EVENTO OFICIAL · REFERIDOS',
+        title: '¡Gana 40 USDT por cada amigo que invites!',
+        subtitle: 'Comparte tu código Pukun Trade y recibe recompensas automáticas en tu billetera.',
+        ctaText: 'Ir a Referidos',
+        targetTab: 'referrals',
+        imageUrl: '/og-ref-40usdt.jpg',
+        active: true,
+        createdAt: now,
+      },
+    ],
+    futureEvents: [
+      {
+        id: 'evt_tiwanaku_cup',
+        title: 'Gran Copa Tiwanaku Trading 2026',
+        rewardUsdt: 5000,
+        startDate: '2026-12-01',
+        endDate: '2026-12-31',
+        description: 'Torneo mensual de rentabilidad en Futuros y Quick Trading con premios en USDT para el Top 20.',
+        active: true,
+      },
+    ],
+    referralSettings: {
+      inviteRewardUsdt: 40,
+      firstDepositBonusPct: 10,
+      commissionPct: 20,
+      maxMonthlyRewardsUsdt: 2500,
+    },
     config: {
+      branding: {
+        name: 'PUKUN TRADE',
+        defaultCurrency: 'USDT',
+        defaultLanguage: 'es',
+        announcement: '¡Gana 40 USDT por cada referido verificado!',
+      },
+      demo_settings: {
+        initialCapital: 10000,
+        feeBps: 10,
+        spreadBps: 4,
+        slippageBps: 2,
+        maxLeverage: 125,
+        allowTopup: true,
+      },
       quickTrading: {
         minAmount: 5,
         maxAmount: 5000,
@@ -299,6 +371,7 @@ function createInitialState(): EngineState {
         payoutByDuration: { 15: 82, 30: 85, 60: 87, 180: 90, 300: 92 },
         allowCancelBeforeSec: 5,
       },
+      enabled_modules: {},
     },
   };
 }
@@ -336,8 +409,69 @@ function uid(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function resolveActiveBehavior(token: CustomToken): { profile: TokenMovementProfile; bias: TokenTrendBias } {
+  const now = new Date();
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const schedules: TokenBehaviorSchedule[] = Array.isArray(token.movement_schedules) ? token.movement_schedules : [];
+  for (const sch of schedules) {
+    if (sch.startTime <= sch.endTime) {
+      if (hhmm >= sch.startTime && hhmm <= sch.endTime) {
+        return { profile: sch.profile, bias: sch.bias };
+      }
+    } else {
+      // overnight schedule (e.g. 22:00 - 04:00)
+      if (hhmm >= sch.startTime || hhmm <= sch.endTime) {
+        return { profile: sch.profile, bias: sch.bias };
+      }
+    }
+  }
+  return { profile: token.movement_profile || 'NORMAL', bias: 'NEUTRAL' };
+}
+
+export function computeCustomTokenNextPrice(symbol: string): number | null {
+  const state = loadState();
+  const base = symbol.split('/')[0];
+  const tok = state.tokens.find((t) => t.symbol.toUpperCase() === base.toUpperCase());
+  const mkt = state.markets.find((m) => m.symbol === symbol);
+  if (!tok || !mkt) return null;
+
+  const { profile, bias } = resolveActiveBehavior(tok);
+  const volMap: Record<TokenMovementProfile, number> = {
+    STABLECOIN: 0.00025,
+    CALM: 0.0009,
+    NORMAL: 0.0024,
+    VOLATILE: 0.0078,
+  };
+  const biasMap: Record<TokenTrendBias, number> = {
+    NEUTRAL: 0,
+    BULLISH: 0.00045,
+    BEARISH: -0.00045,
+  };
+
+  const vol = volMap[profile] ?? 0.0024;
+  const drift = biasMap[bias] ?? 0;
+  let next = mkt.last_price * (1 + drift + (Math.random() - 0.5) * 2 * vol);
+
+  if (profile === 'STABLECOIN') {
+    const peg = tok.initial_price_usdt || 1;
+    next = peg + (next - peg) * 0.35;
+  } else {
+    next = Math.max(tok.initial_price_usdt * 0.15, next);
+  }
+
+  mkt.last_price = Number(next.toFixed(next > 10 ? 2 : 5));
+  mkt.high_24h = Math.max(mkt.high_24h, mkt.last_price);
+  mkt.low_24h = Math.min(mkt.low_24h, mkt.last_price);
+  saveState(state);
+  return mkt.last_price;
+}
+
 async function getLivePrice(symbol: string, state: EngineState): Promise<number> {
   const m = state.markets.find((x) => x.symbol === symbol);
+  if (m?.is_custom_token === 1) {
+    const simulated = computeCustomTokenNextPrice(symbol);
+    if (simulated !== null) return simulated;
+  }
   const clean = symbol.replace('/', '').toUpperCase();
   try {
     const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(clean)}`);
@@ -526,7 +660,14 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
     return { markets: state.markets } as unknown as T;
   }
   if (pathname === '/api/bootstrap' && method === 'GET') {
-    return { branding: { name: 'PUKUN TRADE' }, modules: {} } as unknown as T;
+    return {
+      branding: (state.config.branding as Record<string, unknown>) || { name: 'PUKUN TRADE' },
+      modules: (state.config.enabled_modules as Record<string, boolean>) || {},
+      fees: state.fees,
+      promoBanners: state.promoBanners,
+      futureEvents: state.futureEvents,
+      referralSettings: state.referralSettings,
+    } as unknown as T;
   }
   if (pathname === '/api/markets/favorite' && method === 'POST') {
     const sym = String(body.symbol || '');
@@ -671,7 +812,8 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
     const livePrice = await getLivePrice(symbol, state);
     const executedPrice = orderType === 'MARKET' ? livePrice : Number(body.price || livePrice);
     const totalUsdt = qty * executedPrice;
-    const fee = Number((totalUsdt * 0.001).toFixed(4));
+    const feePct = orderType === 'MARKET' ? (state.fees.spotTakerPct || 0.1) : (state.fees.spotMakerPct || 0.08);
+    const fee = Number(((totalUsdt * feePct) / 100).toFixed(4));
 
     const usdtWallet = getOrCreateWallet(state, targetEnv, quote, 1);
     const baseWallet = getOrCreateWallet(state, targetEnv, base, livePrice);
@@ -1022,9 +1164,13 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
       contract_address: contractAddress,
       audit_status: 'VERIFIED',
       deploy_stage: 'LISTED',
-      listed_on_exchange: 1,
-      launchpad_status: 'ACTIVE',
+      listed_on_exchange: body.listOnExchange === false ? 0 : 1,
+      launchpad_status: String(body.launchpadStatus || 'ACTIVE'),
       initial_price_usdt: price,
+      movement_profile: (body.movementProfile || body.movement_profile || 'NORMAL') as TokenMovementProfile,
+      movement_schedules: Array.isArray(body.movementSchedules || body.movement_schedules)
+        ? (body.movementSchedules || body.movement_schedules)
+        : [],
       created_at: Date.now(),
     };
     state.tokens.unshift(tok);
@@ -1040,20 +1186,20 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
         change_24h: 4.2,
         volume_24h: 250000,
         spread_bps: 8,
-        maker_fee_bps: 5,
-        taker_fee_bps: 8,
+        maker_fee_bps: Math.round((state.fees.spotMakerPct || 0.08) * 100),
+        taker_fee_bps: Math.round((state.fees.spotTakerPct || 0.1) * 100),
         min_qty: 1,
         price_precision: 4,
         qty_precision: 2,
         spot_enabled: 1,
-        futures_enabled: 0,
-        max_leverage: 1,
-        funding_rate: 0,
-        open_interest: 0,
+        futures_enabled: 1,
+        max_leverage: 25,
+        funding_rate: 0.0001,
+        open_interest: 45000,
         is_custom_token: 1,
         liquidity_usdt: 150000,
-        price_source: 'INTERNAL_AMM_DEMO',
-        active: 1,
+        price_source: `CUSTOM_${tok.movement_profile || 'NORMAL'}`,
+        active: tok.listed_on_exchange,
       });
     }
     saveState(state);
@@ -1146,16 +1292,26 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
     return {
       stats: {
         totalUsers: 1,
-        activeMarkets: state.markets.length,
-        openOrders: state.orders.filter((o) => o.status === 'OPEN').length,
-        openPositions: state.positions.filter((p) => p.status === 'OPEN').length,
+        totalOrders: state.orders.length,
+        openFutures: state.positions.filter((p) => p.status === 'OPEN').length,
         activeBots: state.bots.filter((b) => b.status === 'ACTIVE').length,
-        pendingTransactions: state.transactions.filter((t) => t.status === 'PENDING').length,
+        totalVolume24h: state.markets.reduce((acc, m) => acc + (m.volume_24h || 0), 0),
       },
-      users: [],
-      transactions: state.transactions,
+      users: [
+        {
+          id: 'usr_superadmin',
+          email: 'horaciowalterortiz@gmail.com',
+          full_name: 'Horacio Walter Ortiz',
+          role: 'SUPERADMIN',
+          experience_level: 'PRO',
+          kyc_status: 'VERIFIED',
+          two_factor_enabled: 1,
+          status: 'ACTIVE',
+        },
+      ],
+      transactions: state.transactions.map((t) => ({ ...t, user_id: 'usr_superadmin' })),
       markets: state.markets,
-      aiProviders: [
+      providers: [
         {
           id: 'prov_gemini',
           name: 'Google Gemini',
@@ -1164,24 +1320,70 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
           priority: 1,
           enabled: 1,
           status: 'ACTIVE',
-          rate_limit_rpm: 60,
+          max_rpm: 60,
         },
       ],
-      config: state.config,
+      reportedMsgs: [],
+      configs: {
+        branding: state.config.branding,
+        demo_settings: state.config.demo_settings,
+        quick_trading: state.config.quickTrading,
+        referral_settings: state.referralSettings,
+        enabled_modules: state.config.enabled_modules || {},
+        fees: state.fees,
+        promo_banners: state.promoBanners,
+        future_events: state.futureEvents,
+      },
       auditLogs: [],
     } as unknown as T;
   }
+  const cfgMatch = pathname.match(/^\/api\/superadmin\/config\/([^/]+)$/);
+  if (cfgMatch && (method === 'PATCH' || method === 'POST')) {
+    const key = decodeURIComponent(cfgMatch[1]);
+    const val = body.value !== undefined ? body.value : body;
+    if (key === 'fees') {
+      state.fees = { ...state.fees, ...val };
+    } else if (key === 'promo_banners') {
+      state.promoBanners = Array.isArray(val) ? val : state.promoBanners;
+    } else if (key === 'future_events') {
+      state.futureEvents = Array.isArray(val) ? val : state.futureEvents;
+    } else if (key === 'referral_settings') {
+      state.referralSettings = { ...state.referralSettings, ...val };
+    } else if (key === 'quick_trading') {
+      state.config.quickTrading = val;
+    } else {
+      state.config[key] = val;
+    }
+    saveState(state);
+    return { ok: true } as unknown as T;
+  }
   if (pathname === '/api/superadmin/quick-trades' && method === 'GET') {
     await settleExpiredQuickTrades(state);
+    const allQt = state.quickTrades;
+    const summarize = (list: QuickTradeItem[]) => {
+      const wins = list.filter((x) => x.status === 'WON').length;
+      const losses = list.filter((x) => x.status === 'LOST').length;
+      const settled = wins + losses;
+      return {
+        total: list.length,
+        active: list.filter((x) => x.status === 'ACTIVE').length,
+        wins,
+        losses,
+        draws: list.filter((x) => x.status === 'DRAW').length,
+        cancelled: list.filter((x) => x.status === 'CANCELLED').length,
+        winRatePct: settled > 0 ? Number(((wins / settled) * 100).toFixed(1)) : 0,
+        totalVolume: Number(list.reduce((a, b) => a + b.amount, 0).toFixed(2)),
+        traderNetPnl: Number(list.reduce((a, b) => a + b.profit, 0).toFixed(2)),
+      };
+    };
     return {
-      trades: state.quickTrades.filter((t) => t.env === envParam),
-      config: state.config.quickTrading,
+      trades: envParam ? allQt.filter((t) => t.env === envParam) : allQt,
       stats: {
-        total: state.quickTrades.length,
-        open: state.quickTrades.filter((t) => t.status === 'ACTIVE').length,
-        won: state.quickTrades.filter((t) => t.status === 'WON').length,
-        lost: state.quickTrades.filter((t) => t.status === 'LOST').length,
+        global: summarize(allQt),
+        demo: summarize(allQt.filter((t) => t.env === 'DEMO')),
+        real: summarize(allQt.filter((t) => t.env === 'REAL')),
       },
+      auditLogs: [],
     } as unknown as T;
   }
   if (pathname.startsWith('/api/superadmin/')) {

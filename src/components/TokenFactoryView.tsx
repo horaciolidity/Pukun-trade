@@ -1,7 +1,15 @@
 import { useState } from 'react';
-import { Layers, CheckCircle2, Rocket, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { Layers, CheckCircle2, Rocket, ShieldCheck, ArrowUpRight, Clock, Activity, Plus, Trash2 } from 'lucide-react';
 import { apiFetch, formatCurrency } from '../api';
-import { CustomToken, Market, NavSection, UserRole } from '../types';
+import {
+  CustomToken,
+  Market,
+  NavSection,
+  TokenBehaviorSchedule,
+  TokenMovementProfile,
+  TokenTrendBias,
+  UserRole,
+} from '../types';
 
 interface Props {
   mode: 'token-factory' | 'launchpad';
@@ -45,6 +53,17 @@ export function TokenFactoryView({ mode, userRole, tokens, markets, onRefresh, o
   const [burnable, setBurnable] = useState(true);
   const [pausable, setPausable] = useState(true);
   const [listOnExchange, setListOnExchange] = useState(true);
+
+  const [movementProfile, setMovementProfile] = useState<TokenMovementProfile>('NORMAL');
+  const [movementSchedules, setMovementSchedules] = useState<TokenBehaviorSchedule[]>([
+    { id: 'sch_morning', startTime: '08:00', endTime: '14:00', profile: 'CALM', bias: 'BULLISH', label: 'Mañana Tranquila' },
+    { id: 'sch_night', startTime: '18:00', endTime: '23:59', profile: 'VOLATILE', bias: 'NEUTRAL', label: 'Noche Brusca' },
+  ]);
+  const [newSchStart, setNewSchStart] = useState('14:00');
+  const [newSchEnd, setNewSchEnd] = useState('18:00');
+  const [newSchProfile, setNewSchProfile] = useState<TokenMovementProfile>('NORMAL');
+  const [newSchBias, setNewSchBias] = useState<TokenTrendBias>('NEUTRAL');
+  const [newSchLabel, setNewSchLabel] = useState('');
 
   const [liqPct, setLiqPct] = useState(35);
   const [commPct, setCommPct] = useState(25);
@@ -105,6 +124,8 @@ export function TokenFactoryView({ mode, userRole, tokens, markets, onRefresh, o
           initialPriceUsdt: Number(initialPrice),
           listOnExchange,
           launchpadStatus: 'AVAILABLE',
+          movementProfile,
+          movementSchedules,
         }),
       });
       setFeedback({
@@ -344,12 +365,148 @@ export function TokenFactoryView({ mode, userRole, tokens, markets, onRefresh, o
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Descripción</label>
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Propósito, gobernanza y utilidad dentro del ecosistema..."
                     className="w-full rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-xs text-white"
                   />
+                </div>
+
+                {/* Token Market Movement Behavior & Time Schedules (Admin Only) */}
+                <div className="rounded-xl border border-amber-500/25 bg-[#0C0F17] p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                      <Activity className="h-4 w-4 text-cyan-400" />
+                      <span>Comportamiento de Mercado y Horarios del Token</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400">Exclusivo Admin</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-1.5">Tipo de movimiento base</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {(
+                        [
+                          { id: 'STABLECOIN', label: 'Stablecoin', desc: 'Anclado ±0.03%' },
+                          { id: 'CALM', label: 'Tranquilo', desc: 'Baja volatilidad' },
+                          { id: 'NORMAL', label: 'Normal', desc: 'Cripto estándar' },
+                          { id: 'VOLATILE', label: 'Brusco', desc: 'Alta volatilidad' },
+                        ] as const
+                      ).map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setMovementProfile(opt.id)}
+                          className={`rounded-lg border p-2 text-left transition-all cursor-pointer ${
+                            movementProfile === opt.id
+                              ? 'border-amber-400 bg-amber-500/15 text-white'
+                              : 'border-white/10 bg-[#090B10] text-slate-400 hover:border-white/25'
+                          }`}
+                        >
+                          <div className="text-xs font-bold">{opt.label}</div>
+                          <div className="text-[10px] text-slate-400">{opt.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-white/8">
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-cyan-300">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>Horarios para Cambiar el Comportamiento ({movementSchedules.length})</span>
+                    </div>
+
+                    {movementSchedules.map((sch) => (
+                      <div
+                        key={sch.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/8 bg-[#111520] px-3 py-2 text-[11px]"
+                      >
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono font-bold text-amber-300">
+                            {sch.startTime} - {sch.endTime}
+                          </span>
+                          <span className="rounded bg-cyan-500/15 border border-cyan-400/30 px-1.5 py-0.5 text-[10px] font-bold text-cyan-200">
+                            {sch.profile}
+                          </span>
+                          <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-slate-300">
+                            Sesgo: {sch.bias}
+                          </span>
+                          {sch.label && <span className="text-slate-400">· {sch.label}</span>}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setMovementSchedules((prev) => prev.filter((x) => x.id !== sch.id))}
+                          className="text-red-400 hover:text-red-300 cursor-pointer"
+                          title="Quitar horario"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1">
+                      <input
+                        type="time"
+                        value={newSchStart}
+                        onChange={(e) => setNewSchStart(e.target.value)}
+                        className="rounded-lg border border-white/10 bg-[#090B10] px-2 py-1.5 text-xs text-white font-mono"
+                      />
+                      <input
+                        type="time"
+                        value={newSchEnd}
+                        onChange={(e) => setNewSchEnd(e.target.value)}
+                        className="rounded-lg border border-white/10 bg-[#090B10] px-2 py-1.5 text-xs text-white font-mono"
+                      />
+                      <select
+                        value={newSchProfile}
+                        onChange={(e) => setNewSchProfile(e.target.value as TokenMovementProfile)}
+                        className="rounded-lg border border-white/10 bg-[#090B10] px-2 py-1.5 text-xs text-white"
+                      >
+                        <option value="STABLECOIN">Stablecoin</option>
+                        <option value="CALM">Tranquilo</option>
+                        <option value="NORMAL">Normal</option>
+                        <option value="VOLATILE">Brusco</option>
+                      </select>
+                      <select
+                        value={newSchBias}
+                        onChange={(e) => setNewSchBias(e.target.value as TokenTrendBias)}
+                        className="rounded-lg border border-white/10 bg-[#090B10] px-2 py-1.5 text-xs text-white"
+                      >
+                        <option value="NEUTRAL">Neutral</option>
+                        <option value="BULLISH">Alcista</option>
+                        <option value="BEARISH">Bajista</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={newSchLabel}
+                        onChange={(e) => setNewSchLabel(e.target.value)}
+                        placeholder="Etiqueta..."
+                        className="rounded-lg border border-white/10 bg-[#090B10] px-2 py-1.5 text-xs text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMovementSchedules((prev) => [
+                            ...prev,
+                            {
+                              id: `sch_${Date.now()}`,
+                              startTime: newSchStart,
+                              endTime: newSchEnd,
+                              profile: newSchProfile,
+                              bias: newSchBias,
+                              label: newSchLabel || `${newSchProfile} ${newSchStart}-${newSchEnd}`,
+                            },
+                          ]);
+                          setNewSchLabel('');
+                        }}
+                        className="inline-flex items-center justify-center gap-1 rounded-lg bg-amber-500/20 border border-amber-400/40 px-2 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/30 cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Agregar</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

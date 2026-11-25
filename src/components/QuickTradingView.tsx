@@ -17,6 +17,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { apiFetch, formatCurrency, formatPrice, getStoredToken } from '../api';
+import { triggerTradeResultFx } from './TradeResultFx';
+import { computeCustomTokenNextPrice } from '../vercelEngine';
 import {
   Candle,
   Market,
@@ -187,6 +189,18 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
         `/api/quick-trade/history?env=${fetchEnv}`
       );
       if (Array.isArray(res.trades)) {
+        const prevActiveIds = new Set(historyRef.current.filter((t) => t.status === 'ACTIVE').map((t) => t.id));
+        const newlySettled = res.trades.find(
+          (t) => prevActiveIds.has(t.id) && (t.status === 'WON' || t.status === 'LOST')
+        );
+        if (newlySettled) {
+          triggerTradeResultFx(
+            newlySettled.profit,
+            newlySettled.status === 'WON' ? '¡QUICK TRADE GANADO!' : 'QUICK TRADE PERDIDO'
+          );
+          setLastClosedTrade(newlySettled);
+          onSettledRef.current();
+        }
         historyRef.current = res.trades;
         setHistory(res.trades);
         setLastClosedTrade((curr) => {
@@ -298,11 +312,32 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
     if (isVercelHost) {
       setWsStatus('CONNECTED');
       setLastTickReceivedAt(Date.now());
-      const pollBinanceTick = async () => {
+      let anchorPrice = 0;
+      let microPrice = 0;
+      let momentum = 0;
+
+      const pollMarketAnchor = async () => {
         if (closedByCleanup) return;
         const t0 = performance.now();
         try {
           const sym = selectedSymRef.current || 'BTC/USDT';
+          // Check if it's a custom Token Factory asset first
+          const customPrice = computeCustomTokenNextPrice(sym);
+          if (customPrice !== null) {
+            anchorPrice = customPrice;
+            if (!microPrice) microPrice = customPrice;
+            setLatencyMs(12);
+            setLastTickReceivedAt(Date.now());
+            setLiveMarketPatch({
+              last_price: customPrice,
+              change_24h: 2.4,
+              high_24h: customPrice * 1.03,
+              low_24h: customPrice * 0.97,
+              price_source: 'PUKUN_TOKEN_ENGINE',
+            });
+            return;
+          }
+
           const cleanSym = sym.replace('/', '');
           const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(cleanSym)}`);
           if (res.ok && !closedByCleanup) {
@@ -313,6 +348,8 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
               lowPrice: string;
             };
             const lp = parseFloat(d.lastPrice);
+            anchorPrice = lp;
+            if (!microPrice || Math.abs(microPrice - lp) / lp > 0.03) microPrice = lp;
             setLatencyMs(Math.max(1, Math.round(performance.now() - t0)));
             setLastTickReceivedAt(Date.now());
             setLiveMarketPatch({
@@ -327,11 +364,36 @@ export function QuickTradingView({ env, markets, selectedSymbol, wallets, onChan
           // ignore transient fetch errors
         }
       };
-      pollBinanceTick();
-      const pollTimer = setInterval(pollBinanceTick, 2500);
+
+      // High-definition 450ms market micro-tick generator for detailed, realistic chart movement
+      const emitMicroTick = () => {
+        if (closedByCleanup) return;
+        if (!anchorPrice || anchorPrice <= 0) return;
+        const pullToAnchor = (anchorPrice - microPrice) * 0.22;
+        momentum = momentum * 0.55 + (Math.random() - 0.5) * anchorPrice * 0.00028;
+        microPrice = Math.max(anchorPrice * 0.5, microPrice + pullToAnchor + momentum);
+        const rounded = Number(microPrice.toFixed(anchorPrice > 100 ? 2 : anchorPrice > 1 ? 4 : 6));
+        setLastTickReceivedAt(Date.now());
+        setLiveMarketPatch((prev) => ({
+          ...(prev || { change_24h: 0, high_24h: rounded, low_24h: rounded, price_source: 'BINANCE_LIVE' }),
+          last_price: rounded,
+        }));
+        pushQuoteTickRef.current(rounded);
+
+        // Settle any expired active quick trade immediately
+        const now = Date.now();
+        if (historyRef.current.some((t) => t.status === 'ACTIVE' && now >= t.expires_at)) {
+          loadHistoryRef.current();
+        }
+      };
+
+      pollMarketAnchor();
+      const pollTimer = setInterval(pollMarketAnchor, 2000);
+      const microTimer = setInterval(emitMicroTick, 450);
       return () => {
         closedByCleanup = true;
         clearInterval(pollTimer);
+        clearInterval(microTimer);
       };
     }
 

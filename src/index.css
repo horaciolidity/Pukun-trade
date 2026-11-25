@@ -23,7 +23,7 @@
   }
 }
 
-/* Custom sleek dark scrollbar */
+/* Custom sleek dark scrollbar with Pukun gold hover */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -39,9 +39,170 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #d97706;
 }
 
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* =====================================================================
+   PUKUN TRADE — GLOBAL ANCESTRAL TIWANAKU-TECH DECORATION
+   ===================================================================== */
+.pukun-bg-pattern {
+  background-color: #090b10;
+  background-image:
+    radial-gradient(circle at 12% 10%, rgba(245, 158, 11, 0.06), transparent 38%),
+    radial-gradient(circle at 88% 15%, rgba(6, 182, 212, 0.06), transparent 40%),
+    linear-gradient(rgba(245, 158, 11, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 182, 212, 0.025) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+}
+
+.pukun-step-accent {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(245, 158, 11, 0.75) 0px,
+    rgba(245, 158, 11, 0.75) 10px,
+    transparent 10px,
+    transparent 14px,
+    rgba(6, 182, 212, 0.75) 14px,
+    rgba(6, 182, 212, 0.75) 20px,
+    transparent 20px,
+    transparent 24px
+  );
+  height: 2px;
+}
+
+.pukun-chart-watermark {
+  position: relative;
+}
+.pukun-chart-watermark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url('/logo.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 140px 140px;
+  opacity: 0.045;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* =====================================================================
+   EPHEMERAL TRADE RESULT FX (PROFIT EXPLOSION & LOSS BLEEDING)
+   ===================================================================== */
+@keyframes pukun-pop-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.35) translateY(24px);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.14) translateY(-6px);
+  }
+  32% {
+    transform: scale(0.98) translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-8px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.18) translateY(-28px);
+  }
+}
+
+@keyframes pukun-shockwave {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+@keyframes pukun-spark-fly {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(0.15);
+  }
+}
+
+@keyframes pukun-loss-shake {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(-10px);
+  }
+  14% {
+    opacity: 1;
+    transform: scale(1.04) translateX(-7px);
+  }
+  24% {
+    transform: translateX(7px);
+  }
+  34% {
+    transform: translateX(-5px);
+  }
+  44% {
+    transform: translateX(4px);
+  }
+  56% {
+    transform: translateX(0);
+  }
+  82% {
+    opacity: 1;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+}
+
+@keyframes pukun-blood-drip {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scaleY(0.5);
+  }
+  20% {
+    opacity: 0.95;
+    transform: translateY(10px) scaleY(1.2);
+  }
+  80% {
+    opacity: 0.8;
+    transform: translateY(var(--drop-dist, 95px)) scaleY(1.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--drop-dist, 95px) + 28px)) scaleY(0.8);
+  }
+}
+
+.animate-pukun-profit {
+  animation: pukun-pop-burst 2.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-pukun-shockwave {
+  animation: pukun-shockwave 1.1s ease-out forwards;
+}
+
+.animate-pukun-spark {
+  animation: pukun-spark-fly 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pukun-loss {
+  animation: pukun-loss-shake 2.4s ease-out forwards;
+}
+
+.animate-pukun-drip {
+  animation: pukun-blood-drip 1.9s ease-in forwards;
 }

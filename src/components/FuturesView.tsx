@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Calculator } from 'lucide-react';
 import { apiFetch, formatCurrency, formatPrice } from '../api';
+import { triggerTradeResultFx } from './TradeResultFx';
 import { Candle, FuturesPosition, Market, TradingEnv, WalletItem } from '../types';
 import { CandlestickChart } from './CandlestickChart';
 
@@ -99,6 +100,7 @@ export function FuturesView({ env, markets, selectedSymbol, wallets, positions, 
   async function handleClosePosition(id: string) {
     try {
       const res = await apiFetch<{ pnl: number }>(`/api/futures/${id}/close`, { method: 'POST' });
+      triggerTradeResultFx(res.pnl, res.pnl >= 0 ? 'FUTUROS 125X · PROFIT' : 'FUTUROS 125X · PÉRDIDA');
       setFeedback({
         type: 'ok',
         text: `Posición cerrada. PnL realizado: ${res.pnl >= 0 ? '+' : ''}${res.pnl.toFixed(2)} USDT`,
