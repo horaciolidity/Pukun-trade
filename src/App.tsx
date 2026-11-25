@@ -385,7 +385,7 @@ export default function App() {
     if (!user) return;
     const code = user.referral_code || `PUKUN-${user.id.slice(0, 6).toUpperCase()}`;
     const shareUrl = `${window.location.origin}/?ref=${encodeURIComponent(code)}`;
-    const shareText = `Únete a Pukun Trade con mi código ${code} y opera con 10.000 USDT DEMO: ${shareUrl}`;
+    const shareText = `¡Gana 40 USDT en Pukun Trade! Regístrate con mi código ${code} y opera con 10.000 USDT DEMO: ${shareUrl}`;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(shareUrl);
@@ -648,7 +648,7 @@ export default function App() {
                       {user.role === 'SUPERADMIN' && <Crown className="h-2.5 w-2.5 text-amber-400 shrink-0" />}
                     </span>
                     <span className="text-[8.5px] sm:text-[9px] text-amber-400/95 font-medium tracking-tight mt-0.5 whitespace-nowrap">
-                      {refCopied ? '¡Enlace copiado!' : 'Gana USDT compartiendo'}
+                      {refCopied ? '¡Enlace copiado!' : 'Gana 40 USDT compartiendo'}
                     </span>
                   </div>
                 </button>
@@ -899,7 +899,7 @@ export default function App() {
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
                     <Gift className="h-3.5 w-3.5 shrink-0" />
-                    <span>Invita y Gana USDT Compartiendo</span>
+                    <span>Invita y Gana 40 USDT Compartiendo</span>
                   </div>
                   <div className="text-[10px] text-slate-300 mt-0.5 truncate">
                     Tu código: <span className="font-mono font-bold text-white">{user.referral_code}</span>
