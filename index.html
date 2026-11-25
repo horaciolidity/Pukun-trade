@@ -3,18 +3,52 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>CRYPTO AI EXCHANGE — Trading, Bots IA, Futuros & Token Factory</title>
-    <meta name="description" content="Plataforma integral de trading de criptomonedas, futuros hasta 125x, bots algorítmicos, inteligencia de mercado con IA, Quick Trading, Wallet multi-red y Token Factory con entorno DEMO y REAL separados." />
-    <meta property="og:title" content="CRYPTO AI EXCHANGE — Trading, Bots IA, Futuros & Token Factory" />
-    <meta property="og:description" content="Plataforma integral de trading de criptomonedas, futuros hasta 125x, bots algorítmicos, inteligencia de mercado con IA, Quick Trading, Wallet multi-red y Token Factory." />
+    <title>PUKUN TRADE — Exchange Cripto IA · Tecnología Ancestral</title>
+    <meta name="description" content="Pukun Trade: Plataforma integral de trading de criptomonedas, futuros hasta 125x, bots algorítmicos con IA, Quick Trading, Wallet multi-red y Token Factory." />
+    <meta name="theme-color" content="#090B10" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Pukun Trade" />
+
+    <!-- Favicon & Android / iOS PWA Icons -->
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="shortcut icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Open Graph / Social Link Preview -->
+    <meta property="og:site_name" content="PUKUN TRADE" />
+    <meta property="og:title" content="PUKUN TRADE — Exchange Cripto IA · Tecnología Ancestral" />
+    <meta property="og:description" content="Opera Spot, Futuros 125x, Bots IA, Quick Trading, Wallet Multi-Red y Token Factory con precisión institucional." />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://pukun-trade.vercel.app/" />
+    <meta property="og:image" content="https://pukun-trade.vercel.app/og-banner.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="675" />
+    <meta property="og:image:alt" content="PUKUN TRADE — Ancestral Tech Crypto AI Exchange" />
+
+    <!-- Twitter / X Card -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PUKUN TRADE — Exchange Cripto IA · Tecnología Ancestral" />
+    <meta name="twitter:description" content="Spot, Futuros 125x, Bots Algorítmicos con IA, Quick Trading y Token Factory." />
+    <meta name="twitter:image" content="https://pukun-trade.vercel.app/og-banner.jpg" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
-  <body class="bg-[#090B10] text-slate-100 antialiased selection:bg-blue-500/30 selection:text-blue-200">
+  <body class="bg-[#090B10] text-slate-100 antialiased selection:bg-amber-500/30 selection:text-amber-200">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

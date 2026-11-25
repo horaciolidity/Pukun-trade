@@ -1,4 +1,4 @@
-import { ArrowUpRight, ArrowDownRight, Bot, Wallet, Star, Zap, BookOpen } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Bot, Wallet, Star, Zap, BookOpen, TrendingUp, Rocket, Sparkles } from 'lucide-react';
 import { formatCurrency, formatPrice } from '../api';
 import {
   ExperienceLevel,
@@ -72,6 +72,52 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
+      {/* Pukun Trade Ancestral-Tech Welcome Banner */}
+      <div className="relative rounded-2xl border border-amber-500/25 overflow-hidden bg-[#111520]">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-40 pointer-events-none"
+          style={{ backgroundImage: "url('/hero-bg.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#090B10]/95 via-[#090B10]/75 to-transparent pointer-events-none" />
+        <div className="relative p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <img
+              src="/logo.png"
+              alt="Pukun Trade"
+              className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl border border-amber-400/40 shadow-lg shadow-amber-500/15 object-cover shrink-0"
+            />
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">
+                <Sparkles className="h-3 w-3 text-cyan-400" />
+                <span>Pukun Trade · Ancestral Tech Exchange</span>
+              </div>
+              <h1 className="font-display text-lg sm:text-xl font-bold text-white">
+                Centro de Operaciones Inteligentes ({env})
+              </h1>
+              <p className="text-xs text-slate-300 max-w-xl">
+                Accede a todos los módulos del ecosistema: Spot, Futuros 125x, Quick Trading, 7 Bots IA, Señales en Vivo, Wallet Multi-Red y Launchpad.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => onNavigate('quick-trade')}
+              className="rounded-xl bg-gradient-to-r from-amber-500 to-cyan-500 px-4 py-2 text-xs font-bold text-slate-950 hover:brightness-110 transition-all cursor-pointer"
+            >
+              Probar Quick Trade
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate('signals')}
+              className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 transition-colors cursor-pointer"
+            >
+              Ver Señales IA
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Beginner Guidance Strip */}
       {experience === 'BEGINNER' && (
         <div className="rounded-xl border border-blue-500/25 bg-blue-500/8 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -199,6 +245,120 @@ export function DashboardView({
           </div>
           <Wallet className="h-5 w-5 text-violet-400 shrink-0" />
         </button>
+      </div>
+
+      {/* Marketing Visual Banner Cards — Explore All Modules */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-display text-sm sm:text-base font-bold text-white">
+              Explora y Prueba Todos los Módulos de Pukun Trade
+            </h2>
+            <p className="text-[11px] text-slate-400">
+              Selecciona cualquier carta para ir directo a operar o probar la herramienta
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {[
+            {
+              title: 'Spot, Futuros 125x & Quick',
+              badge: 'TRADING PRO',
+              desc: 'Gráficos TradingView, perpetuos hasta 125x y rondas rápidas de 15s a 5m.',
+              img: '/banner-trading.jpg',
+              cta: 'Ir a Futuros',
+              target: 'futures' as NavSection,
+              secondaryCta: 'Quick Trade',
+              secondaryTarget: 'quick-trade' as NavSection,
+              icon: TrendingUp,
+              badgeClass: 'text-emerald-300 bg-emerald-500/20 border-emerald-400/30',
+            },
+            {
+              title: '7 Bots IA & Señales en Vivo',
+              badge: 'IA CUANTITATIVA',
+              desc: 'Automatiza Scalping, Grid, DCA y análisis probabilístico con Gemini.',
+              img: '/banner-bots.jpg',
+              cta: 'Abrir Bots IA',
+              target: 'bots' as NavSection,
+              secondaryCta: 'Market Intel',
+              secondaryTarget: 'market-intel' as NavSection,
+              icon: Bot,
+              badgeClass: 'text-cyan-300 bg-cyan-500/20 border-cyan-400/30',
+            },
+            {
+              title: 'Wallet Multi-Red Segura',
+              badge: '9 BLOCKCHAINS',
+              desc: 'Direcciones BTC, ETH, SOL, BNB, Polygon y Tron con saldo DEMO/REAL aislado.',
+              img: '/banner-wallet.jpg',
+              cta: 'Ver Wallet',
+              target: 'wallet' as NavSection,
+              secondaryCta: 'Referidos',
+              secondaryTarget: 'referrals' as NavSection,
+              icon: Wallet,
+              badgeClass: 'text-amber-300 bg-amber-500/20 border-amber-400/30',
+            },
+            {
+              title: 'Launchpad & Comunidad',
+              badge: 'WEB3 & CRECIMIENTO',
+              desc: 'Nuevos tokens, rankings DEMO, chat en vivo y programa de comisiones.',
+              img: '/banner-launchpad.jpg',
+              cta: 'Ir a Launchpad',
+              target: 'launchpad' as NavSection,
+              secondaryCta: 'Competencias',
+              secondaryTarget: 'competitions' as NavSection,
+              icon: Rocket,
+              badgeClass: 'text-violet-300 bg-violet-500/20 border-violet-400/30',
+            },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <div
+                key={card.title}
+                className="group rounded-2xl border border-white/10 bg-[#111520] overflow-hidden hover:border-amber-400/40 transition-all flex flex-col shadow-lg"
+              >
+                <div className="relative h-32 overflow-hidden">
+                  <img
+                    src={card.img}
+                    alt={card.title}
+                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#111520] via-[#111520]/40 to-transparent" />
+                  <span
+                    className={`absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold tracking-wider backdrop-blur-md ${card.badgeClass}`}
+                  >
+                    <Icon className="h-2.5 w-2.5" />
+                    {card.badge}
+                  </span>
+                </div>
+                <div className="p-3.5 flex-1 flex flex-col justify-between space-y-3">
+                  <div>
+                    <h3 className="font-display text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
+                      {card.title}
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{card.desc}</p>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2 border-t border-white/8">
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(card.target)}
+                      className="flex-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/30 py-1.5 text-[11px] font-semibold text-amber-300 transition-colors cursor-pointer"
+                    >
+                      {card.cta}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(card.secondaryTarget)}
+                      className="rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 px-2.5 py-1.5 text-[11px] font-medium text-slate-300 transition-colors cursor-pointer"
+                    >
+                      {card.secondaryCta}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Main 2-Column Content */}

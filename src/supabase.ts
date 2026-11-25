@@ -26,19 +26,31 @@ export const supabase = createClient(
   }
 );
 
+export const SUPERADMIN_EMAILS = ['horaciowalterortiz@gmail.com'];
+
+export function isSuperadminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return SUPERADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
 export function mapSupabaseUserToProfile(authUser: any, profileData?: any): UserProfile {
   const metadata = authUser?.user_metadata || {};
+  const email = authUser.email || '';
+  const resolvedRole: UserRole = isSuperadminEmail(email)
+    ? 'SUPERADMIN'
+    : ((profileData?.role || metadata.role || 'USER') as UserRole);
+
   return {
     id: authUser.id,
-    email: authUser.email || '',
-    full_name: profileData?.full_name || metadata.full_name || authUser.email?.split('@')[0] || 'Trader',
+    email,
+    full_name: profileData?.full_name || metadata.full_name || email.split('@')[0] || 'Trader',
     avatar_url: profileData?.avatar_url || metadata.avatar_url || '',
-    role: (profileData?.role || metadata.role || 'USER') as UserRole,
+    role: resolvedRole,
     experience_level: (profileData?.experience_level || metadata.experience_level || 'BEGINNER') as ExperienceLevel,
     two_factor_enabled: profileData?.two_factor_enabled ? 1 : 0,
     email_verified: authUser.email_confirmed_at ? 1 : 1, // assume 1 if confirmed or demo
-    kyc_status: profileData?.kyc_status || 'UNVERIFIED',
-    referral_code: profileData?.referral_code || metadata.referral_code || `REF${authUser.id.slice(0, 6).toUpperCase()}`,
+    kyc_status: isSuperadminEmail(email) ? 'VERIFIED' : (profileData?.kyc_status || 'UNVERIFIED'),
+    referral_code: profileData?.referral_code || metadata.referral_code || `PUKUN-${authUser.id.slice(0, 6).toUpperCase()}`,
     favorites: profileData?.favorites || ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
     notificationPrefs: profileData?.notification_prefs || {
       signals: true,
@@ -116,13 +128,14 @@ export async function signUpWithSupabase(
   }
 
   // Create or upsert profile in public.profiles if table exists
+  const assignedRole: UserRole = isSuperadminEmail(data.user.email) ? 'SUPERADMIN' : 'USER';
   try {
     await supabase.from('profiles').upsert({
       id: data.user.id,
       email: data.user.email,
       full_name: fullName,
-      referral_code: referralCode || `REF${data.user.id.slice(0, 6).toUpperCase()}`,
-      role: 'USER',
+      referral_code: referralCode || `PUKUN-${data.user.id.slice(0, 6).toUpperCase()}`,
+      role: assignedRole,
       status: 'ACTIVE',
     });
   } catch (e) {

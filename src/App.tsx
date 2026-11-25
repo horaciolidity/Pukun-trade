@@ -21,6 +21,11 @@ import {
   TrendingUp,
   Gift,
   RotateCcw,
+  Share2,
+  Check,
+  Copy,
+  Download,
+  Crown,
 } from 'lucide-react';
 import { apiFetch, getStoredToken, setStoredToken } from './api';
 import {
@@ -75,12 +80,24 @@ export default function App() {
   const [tokens, setTokens] = useState<CustomToken[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [enabledModules, setEnabledModules] = useState<Record<string, boolean>>({});
-  const [brandingName, setBrandingName] = useState('CRYPTO AI EXCHANGE');
+  const [brandingName, setBrandingName] = useState('PUKUN TRADE');
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const [refCopied, setRefCopied] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
   const [wsLatestChat, setWsLatestChat] = useState<ChatMessage | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Capture Android / Chrome PWA install prompt
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   const loadPublicData = useCallback(async () => {
     try {
@@ -205,27 +222,7 @@ export default function App() {
             setStoredToken('');
           }
         } catch {
-          // If token was set for demo trader, maintain session
-          if (token === 'demo_token_trader') {
-            setUser({
-              id: 'usr_demo_trader',
-              email: 'trader@cryptoai.demo',
-              full_name: 'Demo Trader Pro',
-              avatar_url: '',
-              role: 'USER',
-              experience_level: 'PRO',
-              two_factor_enabled: 0,
-              email_verified: 1,
-              kyc_status: 'VERIFIED',
-              referral_code: 'REFTRADER',
-              favorites: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
-              notificationPrefs: { signals: true, orders: true, bots: true, security: true, community: true },
-              status: 'ACTIVE',
-              created_at: Math.floor(Date.now() / 1000),
-            });
-          } else {
-            setStoredToken('');
-          }
+          setStoredToken('');
         }
       }
       setBooting(false);
@@ -367,7 +364,37 @@ export default function App() {
     setNotifications((prev) => (Array.isArray(prev) ? prev : []).map((n) => ({ ...n, read: 1 })));
   }
 
+  async function handleCopyShareReferral() {
+    if (!user) return;
+    const code = user.referral_code || `PUKUN-${user.id.slice(0, 6).toUpperCase()}`;
+    const shareUrl = `${window.location.origin}/?ref=${encodeURIComponent(code)}`;
+    const shareText = `Únete a Pukun Trade con mi código ${code} y opera con 10.000 USDT DEMO: ${shareUrl}`;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      }
+      setRefCopied(true);
+      setTimeout(() => setRefCopied(false), 2400);
+      if (typeof navigator !== 'undefined' && 'share' in navigator && window.innerWidth < 768) {
+        await navigator.share({ title: 'Pukun Trade — Invitación', text: shareText, url: shareUrl }).catch(() => {});
+      }
+    } catch {
+      setRefCopied(true);
+      setTimeout(() => setRefCopied(false), 2400);
+    }
+  }
+
+  async function handleInstallPwa() {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice.catch(() => {});
+    setDeferredInstallPrompt(null);
+  }
+
   function handleLogout() {
+    if (isSupabaseConfigured()) {
+      supabase.auth.signOut().catch(() => {});
+    }
     setStoredToken('');
     setUser(null);
     setActiveTab('dashboard');
@@ -375,8 +402,9 @@ export default function App() {
 
   if (booting) {
     return (
-      <div className="min-h-screen bg-[#090B10] flex items-center justify-center text-xs text-slate-400">
-        Inicializando CRYPTO AI EXCHANGE...
+      <div className="min-h-screen bg-[#090B10] flex flex-col items-center justify-center gap-3 text-xs text-slate-400">
+        <img src="/logo.png" alt="Pukun Trade" className="h-12 w-12 rounded-2xl border border-amber-400/35 animate-pulse" />
+        <span>Inicializando PUKUN TRADE...</span>
       </div>
     );
   }
@@ -422,9 +450,21 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#090B10] text-slate-100 flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:w-60 xl:w-64 flex-col border-r border-white/8 bg-[#0C0F17] sticky top-0 h-screen shrink-0">
-        <div className="px-5 py-4 border-b border-white/8">
-          <div className="font-display text-base font-bold tracking-tight text-white truncate">{brandingName}</div>
+      <aside className="hidden lg:flex lg:w-60 xl:w-64 flex-col border-r border-amber-500/15 bg-[#0C0F17] sticky top-0 h-screen shrink-0">
+        <div className="px-4 py-3.5 border-b border-white/8 flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="Pukun Trade"
+            className="h-9 w-9 rounded-xl border border-amber-400/35 shadow-md shadow-amber-500/10 object-cover shrink-0"
+          />
+          <div className="min-w-0 leading-tight">
+            <div className="font-display text-sm font-bold tracking-tight text-white truncate">
+              {brandingName === 'CRYPTO AI EXCHANGE' ? 'PUKUN TRADE' : brandingName}
+            </div>
+            <div className="text-[9px] uppercase tracking-[0.18em] text-cyan-400/90 font-semibold">
+              Ancestral Tech
+            </div>
+          </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
@@ -437,10 +477,12 @@ export default function App() {
                 type="button"
                 onClick={() => handleNavigate(item.id)}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors cursor-pointer ${
-                  active ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
+                  active
+                    ? 'bg-gradient-to-r from-amber-500/20 to-cyan-500/15 text-amber-200 border border-amber-400/30'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
                 }`}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-amber-400' : ''}`} />
                 <span className="truncate">{item.label}</span>
               </button>
             );
@@ -448,10 +490,23 @@ export default function App() {
         </nav>
 
         <div className="p-3 border-t border-white/8 text-xs space-y-2">
+          {deferredInstallPrompt && (
+            <button
+              type="button"
+              onClick={handleInstallPwa}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-cyan-500/35 bg-cyan-500/10 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 cursor-pointer"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Instalar App</span>
+            </button>
+          )}
           <div className="rounded-lg bg-[#111520] border border-white/8 px-3 py-2">
-            <div className="font-semibold text-white truncate">{user.full_name}</div>
-            <div className="text-[11px] text-slate-400">
-              {user.role} · {user.experience_level}
+            <div className="font-semibold text-white truncate flex items-center gap-1.5">
+              <span className="truncate">{user.full_name}</span>
+              {user.role === 'SUPERADMIN' && <Crown className="h-3.5 w-3.5 text-amber-400 shrink-0" />}
+            </div>
+            <div className="text-[10px] text-slate-400">
+              <span className={user.role === 'SUPERADMIN' ? 'text-amber-400 font-semibold' : ''}>{user.role}</span> · {user.experience_level}
             </div>
           </div>
           <button
@@ -468,22 +523,29 @@ export default function App() {
       {/* Main Column */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Persistent Top Header + Environment Switcher */}
-        <header className="sticky top-0 z-30 border-b border-white/8 bg-[#090B10]/95 backdrop-blur-md">
-          <div className="px-3 sm:px-6 h-14 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="lg:hidden font-display text-sm font-bold text-white truncate">{brandingName}</span>
+        <header className="sticky top-0 z-30 border-b border-amber-500/15 bg-[#090B10]/95 backdrop-blur-md">
+          <div className="px-2.5 sm:px-6 h-14 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <img
+                src="/logo.png"
+                alt="Pukun Trade"
+                className="lg:hidden h-7 w-7 rounded-lg border border-amber-400/35 object-cover shrink-0"
+              />
+              <span className="lg:hidden font-display text-xs sm:text-sm font-bold text-white truncate">
+                PUKUN <span className="text-amber-400">TRADE</span>
+              </span>
               <span className="hidden lg:inline text-xs font-medium text-slate-400 truncate">
                 {sidebarItems.find((i) => i.id === activeTab)?.label || 'Panel'}
               </span>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               {/* Mandatory Permanent DEMO / REAL Selector */}
               <div className="flex items-center p-0.5 rounded-lg bg-[#111520] border border-white/15">
                 <button
                   type="button"
                   onClick={() => setEnv('DEMO')}
-                  className={`px-2.5 sm:px-3 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${
+                  className={`px-2 sm:px-3 py-1 rounded-md text-[10px] sm:text-[11px] font-bold transition-colors cursor-pointer ${
                     env === 'DEMO' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -492,7 +554,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setEnv('REAL')}
-                  className={`px-2.5 sm:px-3 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${
+                  className={`px-2 sm:px-3 py-1 rounded-md text-[10px] sm:text-[11px] font-bold transition-colors cursor-pointer ${
                     env === 'REAL' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -505,7 +567,7 @@ export default function App() {
                   type="button"
                   onClick={handleResetDemo}
                   title="Restablecer saldo virtual DEMO"
-                  className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-amber-300 hover:bg-amber-500/20 cursor-pointer"
+                  className="hidden xl:inline-flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-amber-300 hover:bg-amber-500/20 cursor-pointer"
                 >
                   <RotateCcw className="h-3 w-3" />
                   <span>Restablecer DEMO</span>
@@ -517,7 +579,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setNotifOpen(!notifOpen)}
-                  className="relative flex items-center justify-center h-9 w-9 rounded-lg border border-white/10 bg-[#111520] text-slate-300 hover:text-white cursor-pointer"
+                  className="relative flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-lg border border-white/10 bg-[#111520] text-slate-300 hover:text-white cursor-pointer"
                   aria-label="Notificaciones"
                 >
                   <Bell className="h-4 w-4" />
@@ -552,16 +614,42 @@ export default function App() {
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleNavigate('profile')}
-                className="hidden sm:flex items-center gap-2 rounded-lg border border-white/10 bg-[#111520] px-2.5 py-1.5 text-xs text-slate-200 hover:bg-white/5 cursor-pointer"
-              >
-                <span className="h-5 w-5 rounded-full bg-blue-600 text-[10px] font-bold flex items-center justify-center text-white">
-                  {user.full_name.slice(0, 1).toUpperCase()}
-                </span>
-                <span className="max-w-25 truncate">{user.full_name.split(' ')[0]}</span>
-              </button>
+              {/* Always-Visible User Name + Referral Copy/Share Icon with tiny earn hint */}
+              <div className="flex items-center gap-1 rounded-xl border border-amber-500/25 bg-[#111520] px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() => handleNavigate('profile')}
+                  className="flex items-center gap-1.5 text-xs text-slate-100 hover:text-amber-300 transition-colors cursor-pointer"
+                  title={`${user.full_name} (${user.role})`}
+                >
+                  <span className="h-6 w-6 rounded-full bg-gradient-to-br from-amber-500 to-cyan-500 text-[10px] font-bold flex items-center justify-center text-slate-950 shrink-0">
+                    {user.full_name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <div className="flex flex-col items-start leading-none">
+                    <span className="max-w-20 sm:max-w-28 truncate text-[11px] font-semibold text-white flex items-center gap-1">
+                      <span className="truncate">{user.full_name.split(' ')[0]}</span>
+                      {user.role === 'SUPERADMIN' && <Crown className="h-2.5 w-2.5 text-amber-400 shrink-0" />}
+                    </span>
+                    <span className="text-[8.5px] sm:text-[9px] text-amber-400/95 font-medium tracking-tight mt-0.5 whitespace-nowrap">
+                      {refCopied ? '¡Enlace copiado!' : 'Gana USDT compartiendo'}
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyShareReferral}
+                  title={`Copiar y compartir tu referido (${user.referral_code}) para ganar dinero`}
+                  aria-label="Copiar enlace de referido"
+                  className={`ml-0.5 flex items-center justify-center h-7 w-7 rounded-lg border transition-all cursor-pointer shrink-0 ${
+                    refCopied
+                      ? 'border-emerald-400/50 bg-emerald-500/20 text-emerald-300'
+                      : 'border-amber-400/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                  }`}
+                >
+                  {refCopied ? <Check className="h-3.5 w-3.5" /> : <Share2 className="h-3.5 w-3.5" />}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -740,50 +828,149 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Mobile "MÁS" Slide-Up Sheet */}
+      {/* Mobile "MÁS" Slide-Up Sheet — Customized Pukun Trade Layout */}
       {moreSheetOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end">
-          <div className="w-full rounded-t-3xl border-t border-white/15 bg-[#111520] p-5 space-y-4 max-h-[82vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <span className="font-display text-base font-bold text-white">Todas las Herramientas</span>
-              <button
-                type="button"
-                onClick={() => setMoreSheetOpen(false)}
-                className="h-9 w-9 rounded-full bg-white/8 flex items-center justify-center text-slate-300"
-              >
-                <X className="h-4 w-4" />
-              </button>
+        <div
+          className="lg:hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-end"
+          onClick={() => setMoreSheetOpen(false)}
+        >
+          <div
+            className="w-full rounded-t-3xl border-t border-amber-500/30 bg-[#0C0F17] overflow-hidden max-h-[86vh] flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Branded Ancestral-Tech Sheet Header */}
+            <div className="relative px-5 pt-4 pb-4 border-b border-white/10 overflow-hidden shrink-0">
+              <div
+                className="absolute inset-0 bg-cover bg-center opacity-35 pointer-events-none"
+                style={{ backgroundImage: "url('/hero-bg.jpg')" }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#0C0F17]/60 to-[#0C0F17]/95 pointer-events-none" />
+              <div className="relative flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <img
+                    src="/logo.png"
+                    alt="Pukun Trade"
+                    className="h-10 w-10 rounded-xl border border-amber-400/40 object-cover shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <div className="font-display text-sm font-bold text-white flex items-center gap-1.5">
+                      <span>PUKUN <span className="text-amber-400">TRADE</span></span>
+                      {user.role === 'SUPERADMIN' && (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
+                          <Crown className="h-2.5 w-2.5" />
+                          SUPERADMIN
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-300 truncate">{user.full_name} · {user.email}</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMoreSheetOpen(false)}
+                  className="h-9 w-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-slate-200 shrink-0 cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5">
-              {sidebarItems.map((item) => {
-                const Icon = item.icon;
+            {/* Scrollable Categorized Tools */}
+            <div className="p-4 space-y-4 overflow-y-auto flex-1">
+              {/* Referral Quick-Earn Banner inside MÁS */}
+              <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 via-[#131826] to-cyan-500/15 p-3.5 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                    <Gift className="h-3.5 w-3.5 shrink-0" />
+                    <span>Invita y Gana USDT Compartiendo</span>
+                  </div>
+                  <div className="text-[10px] text-slate-300 mt-0.5 truncate">
+                    Tu código: <span className="font-mono font-bold text-white">{user.referral_code}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyShareReferral}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2 text-[11px] font-bold text-slate-950 shrink-0 cursor-pointer"
+                >
+                  {refCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  <span>{refCopied ? 'Copiado' : 'Copiar'}</span>
+                </button>
+              </div>
+
+              {/* Categorized Module Groups */}
+              {[
+                {
+                  title: 'Trading & Mercados',
+                  ids: ['dashboard', 'markets', 'spot', 'futures', 'quick-trade'] as NavSection[],
+                },
+                {
+                  title: 'Inteligencia Artificial',
+                  ids: ['bots', 'signals', 'market-intel'] as NavSection[],
+                },
+                {
+                  title: 'Activos, Web3 & Crecimiento',
+                  ids: ['wallet', 'launchpad', 'token-factory', 'referrals', 'competitions'] as NavSection[],
+                },
+                {
+                  title: 'Comunidad & Cuenta',
+                  ids: ['community', 'academy', 'profile', 'superadmin'] as NavSection[],
+                },
+              ].map((group) => {
+                const items = sidebarItems.filter((item) => group.ids.includes(item.id));
+                if (items.length === 0) return null;
                 return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleNavigate(item.id)}
-                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-center min-h-18 cursor-pointer ${
-                      activeTab === item.id
-                        ? 'border-blue-500 bg-blue-600/20 text-white'
-                        : 'border-white/8 bg-[#090B10] text-slate-300'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5 text-blue-400" />
-                    <span className="text-[11px] font-medium leading-tight">{item.label}</span>
-                  </button>
+                  <div key={group.title} className="space-y-2">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 px-1">
+                      {group.title}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {items.map((item) => {
+                        const Icon = item.icon;
+                        const active = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleNavigate(item.id)}
+                            className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2.5 text-center min-h-18 transition-all cursor-pointer ${
+                              active
+                                ? 'border-amber-400/50 bg-gradient-to-b from-amber-500/20 to-cyan-500/10 text-white'
+                                : 'border-white/8 bg-[#111520] text-slate-300 hover:border-white/20'
+                            }`}
+                          >
+                            <Icon className={`h-5 w-5 ${active ? 'text-amber-400' : 'text-cyan-400'}`} />
+                            <span className="text-[10px] font-semibold leading-tight">{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
-            </div>
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 py-3 text-xs font-semibold text-red-300"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Cerrar Sesión</span>
-            </button>
+              {/* Android PWA Install + Logout Actions */}
+              <div className="pt-2 space-y-2">
+                {deferredInstallPrompt && (
+                  <button
+                    type="button"
+                    onClick={handleInstallPwa}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-cyan-500/35 bg-cyan-500/15 py-3 text-xs font-bold text-cyan-200 cursor-pointer"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Instalar App Pukun Trade en Android</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 py-3 text-xs font-semibold text-red-300 cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Cerrar Sesión</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

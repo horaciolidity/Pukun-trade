@@ -1,0 +1,26 @@
+{
+  "name": "Pukun Trade — Crypto AI Exchange",
+  "short_name": "Pukun Trade",
+  "description": "Plataforma ancestralmente tecnológica de trading cripto, futuros 125x, bots IA, señales cuantitativas, wallet multi-red y Token Factory.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090B10",
+  "theme_color": "#090B10",
+  "lang": "es",
+  "categories": ["finance", "business", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
