@@ -112,19 +112,32 @@ export async function signUpWithSupabase(
     email,
     password: pass,
     options: {
+      emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
       data: {
         full_name: fullName,
-        referral_code: referralCode || `REF${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        referral_code: referralCode || `PUKUN-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
       },
     },
   });
 
   if (error) {
+    if (error.message.toLowerCase().includes('email not confirmed')) {
+      throw new Error(
+        'Tu correo aún figura como no confirmado en Supabase. Confírmalo desde tu email o en Supabase Auth -> Users.'
+      );
+    }
     throw new Error(error.message);
   }
 
   if (!data.user) {
     throw new Error('No se pudo crear el usuario.');
+  }
+
+  // If Supabase requires email confirmation and no session was returned yet
+  if (!data.session) {
+    throw new Error(
+      'Cuenta creada. Revisa tu correo y haz clic en el enlace de confirmación (o desactiva "Confirm email" en Supabase para entrar al instante).'
+    );
   }
 
   // Create or upsert profile in public.profiles if table exists
@@ -164,6 +177,11 @@ export async function signInWithSupabase(
   });
 
   if (error) {
+    if (error.message.toLowerCase().includes('email not confirmed')) {
+      throw new Error(
+        'Tu correo aún figura como no confirmado en Supabase. Confírmalo desde tu email o en Supabase Auth -> Users.'
+      );
+    }
     throw new Error(error.message);
   }
 

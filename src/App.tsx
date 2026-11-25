@@ -228,6 +228,23 @@ export default function App() {
       setBooting(false);
     }
     init();
+
+    // Listen to Supabase auth events (e.g. returning from email confirmation link)
+    if (isSupabaseConfigured()) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+          const sbUser = await getCurrentSupabaseUser();
+          if (sbUser) {
+            setStoredToken(session.access_token);
+            setUser(sbUser);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setStoredToken('');
+          setUser(null);
+        }
+      });
+      return () => subscription.unsubscribe();
+    }
   }, [loadPublicData]);
 
   useEffect(() => {
