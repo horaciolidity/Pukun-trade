@@ -90,6 +90,7 @@ export default function App() {
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const [launchingCard, setLaunchingCard] = useState<{ id: NavSection; label: string } | null>(null);
   const [refCopied, setRefCopied] = useState(false);
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
   const [wsLatestChat, setWsLatestChat] = useState<ChatMessage | null>(null);
@@ -377,6 +378,15 @@ export default function App() {
     setPresetSpotSide(presetSide);
     setActiveTab(tab);
     setMoreSheetOpen(false);
+    setLaunchingCard(null);
+  }
+
+  function handleImmersiveCardClick(tab: NavSection, label: string) {
+    if (launchingCard) return;
+    setLaunchingCard({ id: tab, label });
+    setTimeout(() => {
+      handleNavigate(tab);
+    }, 420);
   }
 
   async function handleToggleFavorite(symbol: string) {
@@ -949,26 +959,26 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Categorized Visual Cards Grid */}
+              {/* Categorized Visual Cards Grid — Unique Artwork per Component + Immersive Launch */}
               {(() => {
                 const cardMeta: Record<NavSection, { img: string; desc: string }> = {
-                  dashboard: { img: '/hero-bg.jpg', desc: 'Resumen & Portfolio' },
-                  markets: { img: '/banner-trading.jpg', desc: 'Cotizaciones en vivo' },
-                  spot: { img: '/banner-trading.jpg', desc: 'Compra & Venta directa' },
-                  futures: { img: '/banner-trading.jpg', desc: 'Perpetuos hasta 125x' },
-                  'quick-trade': { img: '/banner-trading.jpg', desc: 'Rondas rápidas 15s–5m' },
-                  bots: { img: '/banner-bots.jpg', desc: '7 Estrategias automáticas' },
-                  signals: { img: '/banner-bots.jpg', desc: 'Alertas en tiempo real' },
-                  'market-intel': { img: '/banner-bots.jpg', desc: 'IA Cuantitativa Gemini' },
-                  wallet: { img: '/banner-wallet.jpg', desc: 'Bóveda 9 Blockchains' },
-                  launchpad: { img: '/banner-launchpad.jpg', desc: 'Lanzamientos & Pools' },
-                  'token-factory': { img: '/banner-launchpad.jpg', desc: 'Crear tokens & horarios' },
-                  referrals: { img: '/og-ref-40usdt.jpg', desc: `Gana ${referralRewardUsdt} USDT invitando` },
-                  competitions: { img: '/banner-launchpad.jpg', desc: 'Rankings & Torneos' },
-                  community: { img: '/patagonia-sunset-bg.jpg', desc: 'Chat en vivo 7 salas' },
-                  academy: { img: '/hero-bg.jpg', desc: 'Guías & Tutoriales' },
-                  profile: { img: '/hero-bg.jpg', desc: 'Seguridad 2FA & KYC' },
-                  superadmin: { img: '/hero-bg.jpg', desc: 'Comisiones, Banners & Control' },
+                  dashboard: { img: '/cards/card-dashboard.svg', desc: 'Resumen & Portfolio' },
+                  markets: { img: '/cards/card-markets.svg', desc: 'Cotizaciones en vivo' },
+                  spot: { img: '/cards/card-spot.svg', desc: 'Compra & Venta directa' },
+                  futures: { img: '/cards/card-futures.svg', desc: 'Perpetuos hasta 125x' },
+                  'quick-trade': { img: '/cards/card-quick-trade.svg', desc: 'Rondas rápidas 15s–5m' },
+                  bots: { img: '/cards/card-bots.svg', desc: '7 Estrategias automáticas' },
+                  signals: { img: '/cards/card-signals.svg', desc: 'Alertas en tiempo real' },
+                  'market-intel': { img: '/cards/card-market-intel.svg', desc: 'IA Cuantitativa Gemini' },
+                  wallet: { img: '/cards/card-wallet.svg', desc: 'Bóveda 9 Blockchains' },
+                  launchpad: { img: '/cards/card-launchpad.svg', desc: 'Lanzamientos & Pools' },
+                  'token-factory': { img: '/cards/card-token-factory.svg', desc: 'Crear tokens & horarios' },
+                  referrals: { img: '/cards/card-referrals.svg', desc: `Gana ${referralRewardUsdt} USDT invitando` },
+                  competitions: { img: '/cards/card-competitions.svg', desc: 'Rankings & Torneos' },
+                  community: { img: '/cards/card-community.svg', desc: 'Chat en vivo 7 salas' },
+                  academy: { img: '/cards/card-academy.svg', desc: 'Guías & Tutoriales' },
+                  profile: { img: '/cards/card-profile.svg', desc: 'Seguridad 2FA & KYC' },
+                  superadmin: { img: '/cards/card-superadmin.svg', desc: 'Comisiones, Banners & Control' },
                 };
 
                 return [
@@ -1003,19 +1013,25 @@ export default function App() {
                         {items.map((item) => {
                           const Icon = item.icon;
                           const active = activeTab === item.id;
-                          const meta = cardMeta[item.id] || { img: '/hero-bg.jpg', desc: 'Explorar módulo' };
+                          const isLaunching = launchingCard?.id === item.id;
+                          const isDimmed = Boolean(launchingCard && !isLaunching);
+                          const meta = cardMeta[item.id] || { img: '/cards/card-dashboard.svg', desc: 'Explorar módulo' };
                           return (
                             <button
                               key={item.id}
                               type="button"
-                              onClick={() => handleNavigate(item.id)}
-                              className={`group relative rounded-2xl border overflow-hidden text-left h-24 p-3 flex flex-col justify-between transition-all cursor-pointer shadow-lg ${
-                                active
-                                  ? 'border-amber-400 ring-1 ring-amber-400/50'
-                                  : 'border-white/15 hover:border-amber-400/45'
+                              onClick={() => handleImmersiveCardClick(item.id, item.label)}
+                              className={`group relative rounded-2xl border overflow-hidden text-left h-24 p-3 flex flex-col justify-between transition-all duration-300 cursor-pointer shadow-lg ${
+                                isLaunching
+                                  ? 'z-30 border-amber-300 ring-2 ring-cyan-400 animate-pukun-card-portal'
+                                  : isDimmed
+                                    ? 'opacity-25 scale-95 border-white/5'
+                                    : active
+                                      ? 'border-amber-400 ring-1 ring-amber-400/50'
+                                      : 'border-white/15 hover:border-amber-400/45 active:scale-95'
                               }`}
                             >
-                              {/* Card Image Background */}
+                              {/* Unique Module Artwork */}
                               <img
                                 src={meta.img}
                                 alt={item.label}
@@ -1023,34 +1039,47 @@ export default function App() {
                               />
                               <div
                                 className={`absolute inset-0 ${
-                                  active
-                                    ? 'bg-linear-to-t from-[#090B10]/95 via-[#090B10]/65 to-amber-500/20'
-                                    : 'bg-linear-to-t from-[#090B10]/95 via-[#090B10]/70 to-[#090B10]/35'
+                                  isLaunching
+                                    ? 'bg-linear-to-t from-cyan-950/85 via-amber-500/20 to-transparent'
+                                    : active
+                                      ? 'bg-linear-to-t from-[#090B10]/95 via-[#090B10]/55 to-amber-500/15'
+                                      : 'bg-linear-to-t from-[#090B10]/92 via-[#090B10]/55 to-transparent'
                                 }`}
                               />
 
+                              {/* Portal light sweep on click */}
+                              {isLaunching && (
+                                <span className="absolute inset-y-0 w-1/2 bg-linear-to-r from-transparent via-amber-300/60 to-transparent animate-pukun-card-sweep pointer-events-none" />
+                              )}
+
                               <div className="relative flex items-center justify-between gap-1">
                                 <span
-                                  className={`h-7 w-7 rounded-lg backdrop-blur-md border flex items-center justify-center ${
-                                    active
-                                      ? 'bg-amber-500/25 border-amber-400/60 text-amber-300'
-                                      : 'bg-black/45 border-white/15 text-cyan-300'
+                                  className={`h-7 w-7 rounded-lg backdrop-blur-md border flex items-center justify-center transition-transform ${
+                                    isLaunching
+                                      ? 'scale-110 bg-amber-400 text-slate-950 border-amber-200'
+                                      : active
+                                        ? 'bg-amber-500/25 border-amber-400/60 text-amber-300'
+                                        : 'bg-black/45 border-white/15 text-cyan-300'
                                   }`}
                                 >
                                   <Icon className="h-3.5 w-3.5" />
                                 </span>
-                                {active && (
+                                {isLaunching ? (
+                                  <span className="rounded-full bg-cyan-400 px-1.5 py-0.5 text-[8px] font-extrabold text-slate-950 uppercase animate-pulse">
+                                    Entrando...
+                                  </span>
+                                ) : active ? (
                                   <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[8px] font-extrabold text-slate-950 uppercase">
                                     Activo
                                   </span>
-                                )}
+                                ) : null}
                               </div>
 
                               <div className="relative">
                                 <div className="font-display text-xs font-bold text-white leading-tight drop-shadow">
                                   {item.label}
                                 </div>
-                                <div className="text-[9.5px] text-slate-300 leading-tight mt-0.5 truncate">
+                                <div className="text-[9.5px] text-slate-200/90 leading-tight mt-0.5 truncate">
                                   {meta.desc}
                                 </div>
                               </div>
