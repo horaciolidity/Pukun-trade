@@ -478,7 +478,7 @@ export default function App() {
                 onClick={() => handleNavigate(item.id)}
                 className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors cursor-pointer ${
                   active
-                    ? 'bg-gradient-to-r from-amber-500/20 to-cyan-500/15 text-amber-200 border border-amber-400/30'
+                    ? 'bg-linear-to-r from-amber-500/20 to-cyan-500/15 text-amber-200 border border-amber-400/30'
                     : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
                 }`}
               >
@@ -622,7 +622,7 @@ export default function App() {
                   className="flex items-center gap-1.5 text-xs text-slate-100 hover:text-amber-300 transition-colors cursor-pointer"
                   title={`${user.full_name} (${user.role})`}
                 >
-                  <span className="h-6 w-6 rounded-full bg-gradient-to-br from-amber-500 to-cyan-500 text-[10px] font-bold flex items-center justify-center text-slate-950 shrink-0">
+                  <span className="h-6 w-6 rounded-full bg-linear-to-br from-amber-500 to-cyan-500 text-[10px] font-bold flex items-center justify-center text-slate-950 shrink-0">
                     {user.full_name.slice(0, 1).toUpperCase()}
                   </span>
                   <div className="flex flex-col items-start leading-none">
@@ -844,7 +844,7 @@ export default function App() {
                 className="absolute inset-0 bg-cover bg-center opacity-35 pointer-events-none"
                 style={{ backgroundImage: "url('/hero-bg.jpg')" }}
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#0C0F17]/60 to-[#0C0F17]/95 pointer-events-none" />
+              <div className="absolute inset-0 bg-linear-to-b from-[#0C0F17]/60 to-[#0C0F17]/95 pointer-events-none" />
               <div className="relative flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <img
@@ -878,7 +878,7 @@ export default function App() {
             {/* Scrollable Categorized Tools */}
             <div className="p-4 space-y-4 overflow-y-auto flex-1">
               {/* Referral Quick-Earn Banner inside MÁS */}
-              <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-500/15 via-[#131826] to-cyan-500/15 p-3.5 flex items-center justify-between gap-3">
+              <div className="rounded-2xl border border-amber-500/30 bg-linear-to-r from-amber-500/15 via-[#131826] to-cyan-500/15 p-3.5 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
                     <Gift className="h-3.5 w-3.5 shrink-0" />
@@ -935,7 +935,7 @@ export default function App() {
                             onClick={() => handleNavigate(item.id)}
                             className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2.5 text-center min-h-18 transition-all cursor-pointer ${
                               active
-                                ? 'border-amber-400/50 bg-gradient-to-b from-amber-500/20 to-cyan-500/10 text-white'
+                                ? 'border-amber-400/50 bg-linear-to-b from-amber-500/20 to-cyan-500/10 text-white'
                                 : 'border-white/8 bg-[#111520] text-slate-300 hover:border-white/20'
                             }`}
                           >

@@ -78,7 +78,7 @@ export function DashboardView({
           className="absolute inset-0 bg-cover bg-center opacity-40 pointer-events-none"
           style={{ backgroundImage: "url('/hero-bg.jpg')" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#090B10]/95 via-[#090B10]/75 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-r from-[#090B10]/95 via-[#090B10]/75 to-transparent pointer-events-none" />
         <div className="relative p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <img
@@ -103,7 +103,7 @@ export function DashboardView({
             <button
               type="button"
               onClick={() => onNavigate('quick-trade')}
-              className="rounded-xl bg-gradient-to-r from-amber-500 to-cyan-500 px-4 py-2 text-xs font-bold text-slate-950 hover:brightness-110 transition-all cursor-pointer"
+              className="rounded-xl bg-linear-to-r from-amber-500 to-cyan-500 px-4 py-2 text-xs font-bold text-slate-950 hover:brightness-110 transition-all cursor-pointer"
             >
               Probar Quick Trade
             </button>
@@ -323,7 +323,7 @@ export function DashboardView({
                     alt={card.title}
                     className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#111520] via-[#111520]/40 to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-[#111520] via-[#111520]/40 to-transparent" />
                   <span
                     className={`absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-bold tracking-wider backdrop-blur-md ${card.badgeClass}`}
                   >
@@ -378,7 +378,7 @@ export function DashboardView({
             </div>
             <div className="divide-y divide-white/6">
               {displayMarkets.map((m) => (
-                <div key={m.symbol} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02]">
+                <div key={m.symbol} className="flex items-center justify-between px-4 py-3 hover:bg-white/2">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"

@@ -212,7 +212,7 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
             <button
               type="button"
               onClick={() => focusAuth('register')}
-              className="rounded-lg bg-gradient-to-r from-amber-500 to-cyan-500 px-4 py-2 text-xs font-bold text-slate-950 hover:brightness-110 transition-all whitespace-nowrap cursor-pointer shadow-lg shadow-amber-500/15"
+              className="rounded-lg bg-linear-to-r from-amber-500 to-cyan-500 px-4 py-2 text-xs font-bold text-slate-950 hover:brightness-110 transition-all whitespace-nowrap cursor-pointer shadow-lg shadow-amber-500/15"
             >
               Suscribirse Gratis
             </button>
@@ -227,7 +227,7 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
             className="absolute inset-0 bg-cover bg-center opacity-35 pointer-events-none"
             style={{ backgroundImage: "url('/hero-bg.jpg')" }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#090B10]/70 via-[#090B10]/80 to-[#090B10] pointer-events-none" />
+          <div className="absolute inset-0 bg-linear-to-b from-[#090B10]/70 via-[#090B10]/80 to-[#090B10] pointer-events-none" />
 
           <div className="relative mx-auto max-w-7xl px-4 sm:px-6 py-10 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
             <div className="lg:col-span-7 space-y-6">
@@ -238,7 +238,7 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
 
               <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-white leading-[1.08] max-w-2xl text-balance">
                 El exchange cripto{' '}
-                <span className="bg-gradient-to-r from-amber-300 via-amber-400 to-cyan-400 bg-clip-text text-transparent">
+                <span className="bg-linear-to-r from-amber-300 via-amber-400 to-cyan-400 bg-clip-text text-transparent">
                   ancestralmente tecnológico
                 </span>{' '}
                 diseñado para dominar el mercado.
@@ -254,7 +254,7 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
                 <button
                   type="button"
                   onClick={() => focusAuth('register')}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 px-5 py-3 text-sm font-bold text-slate-950 hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-amber-500/20"
+                  className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-amber-500 to-amber-400 px-5 py-3 text-sm font-bold text-slate-950 hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-amber-500/20"
                 >
                   <span>Crear Cuenta Gratis</span>
                   <ArrowRight className="h-4 w-4" />
@@ -328,8 +328,8 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
                       setNeeds2FA(false);
                     }}
                     className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors cursor-pointer ${authMode === 'register'
-                        ? 'bg-gradient-to-r from-amber-500/25 to-cyan-500/20 text-amber-200 border border-amber-400/30'
-                        : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-linear-to-r from-amber-500/25 to-cyan-500/20 text-amber-200 border border-amber-400/30'
+                      : 'text-slate-400 hover:text-slate-200'
                       }`}
                   >
                     Crear Cuenta
@@ -342,8 +342,8 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
                       setNeeds2FA(false);
                     }}
                     className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors cursor-pointer ${authMode === 'login'
-                        ? 'bg-[#1A2133] text-white border border-white/15'
-                        : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-[#1A2133] text-white border border-white/15'
+                      : 'text-slate-400 hover:text-slate-200'
                       }`}
                   >
                     Iniciar Sesión
@@ -437,7 +437,7 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-cyan-500 py-2.5 text-sm font-bold text-slate-950 hover:brightness-110 transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-amber-500/15"
+                    className="w-full rounded-xl bg-linear-to-r from-amber-500 to-cyan-500 py-2.5 text-sm font-bold text-slate-950 hover:brightness-110 transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-amber-500/15"
                   >
                     {loading
                       ? 'Procesando...'
@@ -504,7 +504,7 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
                         alt={banner.title}
                         className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#111520] via-[#111520]/45 to-transparent" />
+                      <div className="absolute inset-0 bg-linear-to-t from-[#111520] via-[#111520]/45 to-transparent" />
                       <div className="absolute top-3.5 left-3.5 flex items-center gap-2">
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wider backdrop-blur-md ${banner.accent}`}
@@ -553,7 +553,7 @@ export function LandingAuth({ markets, onAuthenticated }: Props) {
             {/* Security & Separation Banner */}
             <div
               id="seguridad"
-              className="rounded-2xl border border-amber-500/20 bg-gradient-to-r from-[#111520] via-[#131929] to-[#111520] p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+              className="rounded-2xl border border-amber-500/20 bg-linear-to-r from-[#111520] via-[#131929] to-[#111520] p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
             >
               <div className="flex items-start gap-4">
                 <div className="h-11 w-11 rounded-xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center shrink-0">
