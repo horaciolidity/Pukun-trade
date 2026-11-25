@@ -866,134 +866,208 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Mobile "MÁS" Slide-Up Sheet — Customized Pukun Trade Layout */}
+      {/* Mobile "MÁS" Slide-Up Sheet — Patagonian Sunset Horizon & Visual Image Cards */}
       {moreSheetOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-end"
+          className="lg:hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end"
           onClick={() => setMoreSheetOpen(false)}
         >
           <div
-            className="w-full rounded-t-3xl border-t border-amber-500/30 bg-[#0C0F17] overflow-hidden max-h-[86vh] flex flex-col shadow-2xl"
+            className="relative w-full rounded-t-3xl border-t border-amber-400/40 bg-[#090B10] overflow-hidden max-h-[88vh] flex flex-col shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Branded Ancestral-Tech Sheet Header */}
-            <div className="relative px-5 pt-4 pb-4 border-b border-white/10 overflow-hidden shrink-0">
-              <div
-                className="absolute inset-0 bg-cover bg-center opacity-35 pointer-events-none"
-                style={{ backgroundImage: "url('/hero-bg.jpg')" }}
-              />
-              <div className="absolute inset-0 bg-linear-to-b from-[#0C0F17]/60 to-[#0C0F17]/95 pointer-events-none" />
-              <div className="relative flex items-center justify-between gap-3">
+            {/* Full Patagonian Dark Sunset Horizon Background */}
+            <div
+              className="absolute inset-0 bg-cover bg-bottom opacity-65 pointer-events-none"
+              style={{ backgroundImage: "url('/patagonia-sunset-bg.jpg')" }}
+            />
+            <div className="absolute inset-0 bg-linear-to-b from-[#090B10]/85 via-[#090B10]/65 to-[#090B10]/92 pointer-events-none" />
+
+            {/* Top Drag Handle + Branded Header */}
+            <div className="relative px-5 pt-3 pb-3.5 border-b border-amber-400/20 shrink-0">
+              <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-amber-300/40" />
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <img
                     src="/logo.png"
                     alt="Pukun Trade"
-                    className="h-10 w-10 rounded-xl border border-amber-400/40 object-cover shrink-0"
+                    className="h-10 w-10 rounded-xl border border-amber-400/50 shadow-lg shadow-amber-500/20 object-cover shrink-0"
                   />
                   <div className="min-w-0">
                     <div className="font-display text-sm font-bold text-white flex items-center gap-1.5">
                       <span>PUKUN <span className="text-amber-400">TRADE</span></span>
                       {user.role === 'SUPERADMIN' && (
-                        <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/25 border border-amber-400/50 px-1.5 py-0.5 text-[9px] font-bold text-amber-200">
                           <Crown className="h-2.5 w-2.5" />
                           SUPERADMIN
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-300 truncate">{user.full_name} · {user.email}</div>
+                    <div className="text-[11px] text-amber-100/80 truncate">{user.full_name} · {user.email}</div>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setMoreSheetOpen(false)}
-                  className="h-9 w-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-slate-200 shrink-0 cursor-pointer"
+                  className="h-9 w-9 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
+              <div className="pukun-step-accent w-full mt-3 opacity-80" />
             </div>
 
-            {/* Scrollable Categorized Tools */}
-            <div className="p-4 space-y-4 overflow-y-auto flex-1">
-              {/* Referral Quick-Earn Banner inside MÁS */}
-              <div className="rounded-2xl border border-amber-500/30 bg-linear-to-r from-amber-500/15 via-[#131826] to-cyan-500/15 p-3.5 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                    <Gift className="h-3.5 w-3.5 shrink-0" />
-                    <span>Invita y Gana 40 USDT Compartiendo</span>
+            {/* Scrollable Visual Image Cards */}
+            <div className="relative p-4 space-y-4 overflow-y-auto flex-1">
+              {/* Referral Quick-Earn Card over Patagonian Sunset */}
+              <div className="relative rounded-2xl border border-amber-400/45 overflow-hidden shadow-xl">
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-45 pointer-events-none"
+                  style={{ backgroundImage: "url('/og-ref-40usdt.jpg')" }}
+                />
+                <div className="absolute inset-0 bg-linear-to-r from-[#090B10]/95 via-[#090B10]/80 to-[#090B10]/55 pointer-events-none" />
+                <div className="relative p-3.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
+                      <Gift className="h-3.5 w-3.5 shrink-0" />
+                      <span>Invita y Gana {referralRewardUsdt} USDT</span>
+                    </div>
+                    <div className="text-[10px] text-slate-200 mt-0.5 truncate">
+                      Código: <span className="font-mono font-bold text-white">{user.referral_code}</span>
+                    </div>
                   </div>
-                  <div className="text-[10px] text-slate-300 mt-0.5 truncate">
-                    Tu código: <span className="font-mono font-bold text-white">{user.referral_code}</span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyShareReferral}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-linear-to-r from-amber-500 to-amber-400 px-3 py-2 text-[11px] font-bold text-slate-950 shrink-0 cursor-pointer shadow-lg shadow-amber-500/25"
+                  >
+                    {refCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>{refCopied ? 'Copiado' : 'Compartir'}</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCopyShareReferral}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2 text-[11px] font-bold text-slate-950 shrink-0 cursor-pointer"
-                >
-                  {refCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  <span>{refCopied ? 'Copiado' : 'Copiar'}</span>
-                </button>
               </div>
 
-              {/* Categorized Module Groups */}
-              {[
-                {
-                  title: 'Trading & Mercados',
-                  ids: ['dashboard', 'markets', 'spot', 'futures', 'quick-trade'] as NavSection[],
-                },
-                {
-                  title: 'Inteligencia Artificial',
-                  ids: ['bots', 'signals', 'market-intel'] as NavSection[],
-                },
-                {
-                  title: 'Activos, Web3 & Crecimiento',
-                  ids: ['wallet', 'launchpad', 'token-factory', 'referrals', 'competitions'] as NavSection[],
-                },
-                {
-                  title: 'Comunidad & Cuenta',
-                  ids: ['community', 'academy', 'profile', 'superadmin'] as NavSection[],
-                },
-              ].map((group) => {
-                const items = sidebarItems.filter((item) => group.ids.includes(item.id));
-                if (items.length === 0) return null;
-                return (
-                  <div key={group.title} className="space-y-2">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 px-1">
-                      {group.title}
+              {/* Categorized Visual Cards Grid */}
+              {(() => {
+                const cardMeta: Record<NavSection, { img: string; desc: string }> = {
+                  dashboard: { img: '/hero-bg.jpg', desc: 'Resumen & Portfolio' },
+                  markets: { img: '/banner-trading.jpg', desc: 'Cotizaciones en vivo' },
+                  spot: { img: '/banner-trading.jpg', desc: 'Compra & Venta directa' },
+                  futures: { img: '/banner-trading.jpg', desc: 'Perpetuos hasta 125x' },
+                  'quick-trade': { img: '/banner-trading.jpg', desc: 'Rondas rápidas 15s–5m' },
+                  bots: { img: '/banner-bots.jpg', desc: '7 Estrategias automáticas' },
+                  signals: { img: '/banner-bots.jpg', desc: 'Alertas en tiempo real' },
+                  'market-intel': { img: '/banner-bots.jpg', desc: 'IA Cuantitativa Gemini' },
+                  wallet: { img: '/banner-wallet.jpg', desc: 'Bóveda 9 Blockchains' },
+                  launchpad: { img: '/banner-launchpad.jpg', desc: 'Lanzamientos & Pools' },
+                  'token-factory': { img: '/banner-launchpad.jpg', desc: 'Crear tokens & horarios' },
+                  referrals: { img: '/og-ref-40usdt.jpg', desc: `Gana ${referralRewardUsdt} USDT invitando` },
+                  competitions: { img: '/banner-launchpad.jpg', desc: 'Rankings & Torneos' },
+                  community: { img: '/patagonia-sunset-bg.jpg', desc: 'Chat en vivo 7 salas' },
+                  academy: { img: '/hero-bg.jpg', desc: 'Guías & Tutoriales' },
+                  profile: { img: '/hero-bg.jpg', desc: 'Seguridad 2FA & KYC' },
+                  superadmin: { img: '/hero-bg.jpg', desc: 'Comisiones, Banners & Control' },
+                };
+
+                return [
+                  {
+                    title: 'Trading & Mercados',
+                    ids: ['dashboard', 'markets', 'spot', 'futures', 'quick-trade'] as NavSection[],
+                  },
+                  {
+                    title: 'Inteligencia Artificial',
+                    ids: ['bots', 'signals', 'market-intel'] as NavSection[],
+                  },
+                  {
+                    title: 'Activos, Web3 & Crecimiento',
+                    ids: ['wallet', 'launchpad', 'token-factory', 'referrals', 'competitions'] as NavSection[],
+                  },
+                  {
+                    title: 'Comunidad & Cuenta',
+                    ids: ['community', 'academy', 'profile', 'superadmin'] as NavSection[],
+                  },
+                ].map((group) => {
+                  const items = sidebarItems.filter((item) => group.ids.includes(item.id));
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={group.title} className="space-y-2">
+                      <div className="flex items-center gap-2 px-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200/90 drop-shadow">
+                          {group.title}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {items.map((item) => {
+                          const Icon = item.icon;
+                          const active = activeTab === item.id;
+                          const meta = cardMeta[item.id] || { img: '/hero-bg.jpg', desc: 'Explorar módulo' };
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => handleNavigate(item.id)}
+                              className={`group relative rounded-2xl border overflow-hidden text-left h-24 p-3 flex flex-col justify-between transition-all cursor-pointer shadow-lg ${
+                                active
+                                  ? 'border-amber-400 ring-1 ring-amber-400/50'
+                                  : 'border-white/15 hover:border-amber-400/45'
+                              }`}
+                            >
+                              {/* Card Image Background */}
+                              <img
+                                src={meta.img}
+                                alt={item.label}
+                                className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                              <div
+                                className={`absolute inset-0 ${
+                                  active
+                                    ? 'bg-linear-to-t from-[#090B10]/95 via-[#090B10]/65 to-amber-500/20'
+                                    : 'bg-linear-to-t from-[#090B10]/95 via-[#090B10]/70 to-[#090B10]/35'
+                                }`}
+                              />
+
+                              <div className="relative flex items-center justify-between gap-1">
+                                <span
+                                  className={`h-7 w-7 rounded-lg backdrop-blur-md border flex items-center justify-center ${
+                                    active
+                                      ? 'bg-amber-500/25 border-amber-400/60 text-amber-300'
+                                      : 'bg-black/45 border-white/15 text-cyan-300'
+                                  }`}
+                                >
+                                  <Icon className="h-3.5 w-3.5" />
+                                </span>
+                                {active && (
+                                  <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[8px] font-extrabold text-slate-950 uppercase">
+                                    Activo
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="relative">
+                                <div className="font-display text-xs font-bold text-white leading-tight drop-shadow">
+                                  {item.label}
+                                </div>
+                                <div className="text-[9.5px] text-slate-300 leading-tight mt-0.5 truncate">
+                                  {meta.desc}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {items.map((item) => {
-                        const Icon = item.icon;
-                        const active = activeTab === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => handleNavigate(item.id)}
-                            className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2.5 text-center min-h-18 transition-all cursor-pointer ${
-                              active
-                                ? 'border-amber-400/50 bg-linear-to-b from-amber-500/20 to-cyan-500/10 text-white'
-                                : 'border-white/8 bg-[#111520] text-slate-300 hover:border-white/20'
-                            }`}
-                          >
-                            <Icon className={`h-5 w-5 ${active ? 'text-amber-400' : 'text-cyan-400'}`} />
-                            <span className="text-[10px] font-semibold leading-tight">{item.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
 
               {/* Android PWA Install + Logout Actions */}
-              <div className="pt-2 space-y-2">
+              <div className="pt-2 space-y-2 pb-2">
                 {deferredInstallPrompt && (
                   <button
                     type="button"
                     onClick={handleInstallPwa}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-cyan-500/35 bg-cyan-500/15 py-3 text-xs font-bold text-cyan-200 cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-cyan-400/45 bg-cyan-500/20 backdrop-blur-md py-3 text-xs font-bold text-cyan-100 cursor-pointer"
                   >
                     <Download className="h-4 w-4" />
                     <span>Instalar App Pukun Trade en Android</span>
@@ -1002,7 +1076,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 py-3 text-xs font-semibold text-red-300 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-950/60 backdrop-blur-md py-3 text-xs font-semibold text-red-200 cursor-pointer"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Cerrar Sesión</span>
