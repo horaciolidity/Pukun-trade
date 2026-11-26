@@ -71,7 +71,7 @@ export function TradeResultFx() {
   return (
     <div
       key={activeFx.id}
-      className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center overflow-hidden"
+      className="fixed inset-0 z-100 pointer-events-none flex items-center justify-center overflow-hidden"
       aria-live="polite"
     >
       {isWin ? (

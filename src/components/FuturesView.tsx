@@ -371,7 +371,7 @@ export function FuturesView({ env, markets, selectedSymbol, wallets, positions, 
         {positions.length === 0 ? (
           <div className="p-6 text-center text-xs text-slate-400">No hay posiciones de futuros en {env}.</div>
         ) : (
-          <table className="w-full text-left text-xs min-w-[780px]">
+          <table className="w-full text-left text-xs min-w-195">
             <thead>
               <tr className="border-b border-white/8 text-[11px] text-slate-400">
                 <th className="py-2.5 px-4">Contrato</th>
@@ -395,7 +395,7 @@ export function FuturesView({ env, markets, selectedSymbol, wallets, positions, 
                     : p.realized_pnl;
 
                 return (
-                  <tr key={p.id} className="hover:bg-white/[0.02]">
+                  <tr key={p.id} className="hover:bg-white/2">
                     <td className="py-2.5 px-4 font-sans font-semibold text-white">
                       {p.market_symbol} <span className="text-slate-500 font-normal">({p.margin_mode})</span>
                     </td>

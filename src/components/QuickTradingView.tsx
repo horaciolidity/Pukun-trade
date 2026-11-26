@@ -1693,7 +1693,7 @@ export function QuickTradingView({
                     key={v}
                     type="button"
                     onClick={() => setAmount(String(v))}
-                    className={`rounded-lg border py-2 min-h-[38px] text-xs font-mono transition-colors cursor-pointer ${Number(amount) === v
+                    className={`rounded-lg border py-2 min-h-9.5 text-xs font-mono transition-colors cursor-pointer ${Number(amount) === v
                         ? 'border-blue-500/60 bg-blue-500/15 text-blue-300 font-semibold'
                         : 'border-white/10 bg-[#080B11] text-slate-300 hover:bg-white/5'
                       }`}
@@ -1716,7 +1716,7 @@ export function QuickTradingView({
                     key={sec}
                     type="button"
                     onClick={() => setDurationSec(sec)}
-                    className={`py-2.5 min-h-[42px] rounded-lg text-xs font-mono whitespace-nowrap transition-colors cursor-pointer ${durationSec === sec
+                    className={`py-2.5 min-h-10.5 rounded-lg text-xs font-mono whitespace-nowrap transition-colors cursor-pointer ${durationSec === sec
                         ? 'bg-blue-600 text-white font-semibold shadow-sm'
                         : 'bg-[#080B11] border border-white/8 text-slate-400 hover:text-white'
                       }`}
@@ -1757,7 +1757,7 @@ export function QuickTradingView({
                 onMouseEnter={() => setHoverDirection('UP')}
                 onMouseLeave={() => setHoverDirection(null)}
                 onClick={() => handleTrade('UP')}
-                className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] min-h-[58px] py-3 px-4 text-white transition-all cursor-pointer disabled:opacity-50"
+                className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] min-h-14.5 py-3 px-4 text-white transition-all cursor-pointer disabled:opacity-50"
               >
                 <div className="flex items-center gap-1.5 text-sm font-bold tracking-wide">
                   <TrendingUp className="h-4 w-4" />
@@ -1772,7 +1772,7 @@ export function QuickTradingView({
                 onMouseEnter={() => setHoverDirection('DOWN')}
                 onMouseLeave={() => setHoverDirection(null)}
                 onClick={() => handleTrade('DOWN')}
-                className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-red-600 hover:bg-red-500 active:scale-[0.99] min-h-[58px] py-3 px-4 text-white transition-all cursor-pointer disabled:opacity-50"
+                className="flex flex-col items-center justify-center gap-0.5 rounded-xl bg-red-600 hover:bg-red-500 active:scale-[0.99] min-h-14.5 py-3 px-4 text-white transition-all cursor-pointer disabled:opacity-50"
               >
                 <div className="flex items-center gap-1.5 text-sm font-bold tracking-wide">
                   <TrendingDown className="h-4 w-4" />

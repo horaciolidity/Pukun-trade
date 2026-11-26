@@ -249,7 +249,7 @@ export function ShareTradeModal({ trade, referralCode, referralRewardUsdt = 40, 
 
   return (
     <div
-      className="fixed inset-0 z-[95] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+      className="fixed inset-0 z-95 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div

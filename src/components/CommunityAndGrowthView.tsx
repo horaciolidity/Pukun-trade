@@ -412,7 +412,7 @@ export function CommunityAndGrowthView({ mode, user, wsLatestChat }: Props) {
           <div className="px-4 py-3 border-b border-white/8 text-sm font-semibold text-white">
             Ranking en Tiempo Real (Rentabilidad DEMO)
           </div>
-          <table className="w-full text-left text-xs min-w-[540px]">
+          <table className="w-full text-left text-xs min-w-135">
             <thead>
               <tr className="border-b border-white/8 text-[11px] text-slate-400">
                 <th className="py-2.5 px-4">Posición</th>
@@ -444,7 +444,7 @@ export function CommunityAndGrowthView({ mode, user, wsLatestChat }: Props) {
 
   /* LIVE COMMUNITY CHAT */
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-180px)] min-h-[520px]">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-180px)] min-h-130">
       <div className="lg:col-span-3 rounded-xl border border-white/10 bg-[#111520] p-3 space-y-1">
         <div className="flex items-center gap-2 px-2 py-2 text-xs font-semibold text-slate-300 border-b border-white/8 mb-2">
           <Users className="h-4 w-4 text-blue-400" />

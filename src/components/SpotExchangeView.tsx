@@ -307,8 +307,8 @@ export function SpotExchangeView({
                   type="button"
                   onClick={() => setSide('BUY')}
                   className={`py-2.5 rounded-lg text-sm font-semibold border transition-colors cursor-pointer ${side === 'BUY'
-                      ? 'bg-emerald-600 border-emerald-500 text-white'
-                      : 'bg-[#090B10] border-white/10 text-slate-400 hover:text-white'
+                    ? 'bg-emerald-600 border-emerald-500 text-white'
+                    : 'bg-[#090B10] border-white/10 text-slate-400 hover:text-white'
                     }`}
                 >
                   Comprar {base}
@@ -317,8 +317,8 @@ export function SpotExchangeView({
                   type="button"
                   onClick={() => setSide('SELL')}
                   className={`py-2.5 rounded-lg text-sm font-semibold border transition-colors cursor-pointer ${side === 'SELL'
-                      ? 'bg-red-600 border-red-500 text-white'
-                      : 'bg-[#090B10] border-white/10 text-slate-400 hover:text-white'
+                    ? 'bg-red-600 border-red-500 text-white'
+                    : 'bg-[#090B10] border-white/10 text-slate-400 hover:text-white'
                     }`}
                 >
                   Vender {base}
@@ -369,8 +369,8 @@ export function SpotExchangeView({
               {feedback && (
                 <div
                   className={`rounded-lg px-3.5 py-2.5 text-xs border ${feedback.type === 'ok'
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                      : 'bg-red-500/10 border-red-500/30 text-red-300'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
                     }`}
                 >
                   {feedback.text}
@@ -464,8 +464,8 @@ export function SpotExchangeView({
                   <span
                     key={ord.id}
                     className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-mono ${ord.side === 'BUY'
-                        ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300'
-                        : 'border-red-500/35 bg-red-500/10 text-red-300'
+                      ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300'
+                      : 'border-red-500/35 bg-red-500/10 text-red-300'
                       }`}
                   >
                     <span>
@@ -661,8 +661,8 @@ export function SpotExchangeView({
               {feedback && (
                 <div
                   className={`rounded-lg px-3 py-2 text-[11px] border ${feedback.type === 'ok'
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                      : 'bg-red-500/10 border-red-500/30 text-red-300'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
                     }`}
                 >
                   {feedback.text}
@@ -691,7 +691,7 @@ export function SpotExchangeView({
         {orders.length === 0 ? (
           <div className="p-6 text-center text-xs text-slate-400">Aún no hay órdenes Spot registradas en {env}.</div>
         ) : (
-          <table className="w-full text-left text-xs min-w-[680px]">
+          <table className="w-full text-left text-xs min-w-170">
             <thead>
               <tr className="border-b border-white/8 text-[11px] text-slate-400">
                 <th className="py-2.5 px-4">Par</th>
@@ -705,7 +705,7 @@ export function SpotExchangeView({
             </thead>
             <tbody className="divide-y divide-white/6 font-mono tabular-nums">
               {orders.slice(0, 15).map((o) => (
-                <tr key={o.id} className="hover:bg-white/[0.02]">
+                <tr key={o.id} className="hover:bg-white/2">
                   <td className="py-2.5 px-4 font-sans font-semibold text-white">{o.market_symbol}</td>
                   <td className="py-2.5 px-4 font-sans">
                     <span className={o.side === 'BUY' ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
