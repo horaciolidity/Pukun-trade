@@ -34,7 +34,7 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const merchantKey = (process.env.OXAPAY_MERCHANT_API_KEY || '').trim();
+  const merchantKey = (process.env.OXAPAY_MERCHANT_API_KEY || '').trim().replace(/^["']|["']$/g, '');
   if (!merchantKey) {
     return res.status(500).json({
       error: 'Falta configurar OXAPAY_MERCHANT_API_KEY en Vercel (Settings -> Environment Variables).',
@@ -133,9 +133,10 @@ export default async function handler(req: any, res: any) {
       const legacyJson = (await legacyRes.json()) as any;
       address = legacyJson?.address || legacyJson?.data?.address || '';
       if (!address) {
+        const keyPrefix = merchantKey.slice(0, 6);
         const finalMsg =
           v1Error && v1Error.toLowerCase().includes('invalid')
-            ? `OxaPay rechazó la clave o red (${v1Error}). Verifica tu Merchant API Key en OxaPay Dashboard -> Merchant API.`
+            ? `OxaPay rechazó la clave (${keyPrefix}...) -> ${v1Error}. Verifica que OXAPAY_MERCHANT_API_KEY en Vercel (Production) empiece por XQPJLS y haz Redeploy.`
             : legacyJson?.message || v1Error || `OxaPay no devolvió dirección para ${currency} en ${v1Network}.`;
         return res.status(502).json({ error: finalMsg });
       }

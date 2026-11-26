@@ -6,7 +6,7 @@ export default async function handler(req: any, res: any) {
     return res.status(405).send('Method not allowed');
   }
 
-  const merchantKey = (process.env.OXAPAY_MERCHANT_API_KEY || '').trim();
+  const merchantKey = (process.env.OXAPAY_MERCHANT_API_KEY || '').trim().replace(/^["']|["']$/g, '');
   if (!merchantKey) {
     return res.status(500).send('Missing OXAPAY_MERCHANT_API_KEY');
   }
