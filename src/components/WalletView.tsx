@@ -258,7 +258,7 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
 
       {activeTab === 'balances' && (
         <div className="rounded-xl border border-white/10 bg-[#111520] overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[640px]">
+          <table className="w-full text-left text-xs min-w-160">
             <thead>
               <tr className="border-b border-white/8 text-[11px] text-slate-400">
                 <th className="py-3 px-4">Activo</th>
@@ -270,7 +270,7 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
             </thead>
             <tbody className="divide-y divide-white/6 font-mono tabular-nums">
               {wallets.map((w) => (
-                <tr key={w.asset} className="hover:bg-white/[0.02]">
+                <tr key={w.asset} className="hover:bg-white/2">
                   <td className="py-3 px-4 font-sans font-bold text-white">{w.asset}</td>
                   <td className="py-3 px-4 text-right text-slate-200">{w.available.toFixed(4)}</td>
                   <td className="py-3 px-4 text-right text-slate-400">{w.locked.toFixed(4)}</td>
@@ -343,7 +343,7 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
               {depositAddress ? (
                 <QrMatrix value={depositAddress} size={132} />
               ) : (
-                <div className="h-[132px] w-[132px] rounded-lg border border-white/10 bg-[#111520] flex items-center justify-center text-center p-2 text-[10px] text-slate-400 shrink-0">
+                <div className="h-33 w-33 rounded-lg border border-white/10 bg-[#111520] flex items-center justify-center text-center p-2 text-[10px] text-slate-400 shrink-0">
                   {oxaLoading ? 'Conectando OxaPay...' : 'Sin dirección real aún'}
                 </div>
               )}
@@ -580,7 +580,7 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
         {transactions.length === 0 ? (
           <div className="p-6 text-center text-xs text-slate-400">Sin movimientos registrados en {env}.</div>
         ) : (
-          <table className="w-full text-left text-xs min-w-[680px]">
+          <table className="w-full text-left text-xs min-w-170">
             <thead>
               <tr className="border-b border-white/8 text-[11px] text-slate-400">
                 <th className="py-2.5 px-4">Tipo</th>
@@ -598,7 +598,7 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
                     {tx.asset} · {tx.network}
                   </td>
                   <td className="py-2.5 px-4 text-right text-white">{tx.amount}</td>
-                  <td className="py-2.5 px-4 text-slate-400 truncate max-w-[180px]">{tx.txid}</td>
+                  <td className="py-2.5 px-4 text-slate-400 truncate max-w-45">{tx.txid}</td>
                   <td className="py-2.5 px-4 font-sans">
                     <span
                       className={
