@@ -387,7 +387,7 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
             <div className="px-4 py-3 border-b border-white/8 text-sm font-semibold text-white">
               Registro de Auditoría Inmutable
             </div>
-            <table className="w-full text-left text-xs min-w-[700px]">
+            <table className="w-full text-left text-xs min-w-175">
               <thead>
                 <tr className="border-b border-white/8 text-[11px] text-slate-400">
                   <th className="py-2.5 px-4">Fecha</th>
@@ -415,7 +415,7 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
 
       {tab === 'users' && (
         <div className="rounded-xl border border-white/10 bg-[#111520] overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[760px]">
+          <table className="w-full text-left text-xs min-w-190">
             <thead>
               <tr className="border-b border-white/8 text-[11px] text-slate-400">
                 <th className="py-3 px-4">Usuario</th>
@@ -482,7 +482,7 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
           <div className="px-4 py-3 border-b border-white/8 text-sm font-semibold text-white">
             Conciliación de Depósitos y Retiros (Sin modificación arbitraria de saldos reales)
           </div>
-          <table className="w-full text-left text-xs min-w-[740px]">
+          <table className="w-full text-left text-xs min-w-185">
             <thead>
               <tr className="border-b border-white/8 text-[11px] text-slate-400">
                 <th className="py-2.5 px-4">Entorno</th>
@@ -503,7 +503,7 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                     {tx.asset} · {tx.network}
                   </td>
                   <td className="py-2.5 px-4 text-right text-white">{tx.amount}</td>
-                  <td className="py-2.5 px-4 text-slate-400 truncate max-w-[140px]">{tx.txid}</td>
+                  <td className="py-2.5 px-4 text-slate-400 truncate max-w-35">{tx.txid}</td>
                   <td className="py-2.5 px-4 font-sans text-amber-300">{tx.status}</td>
                   <td className="py-2.5 px-4 text-right font-sans">
                     {(tx.status === 'PENDING' || tx.status === 'FLAGGED') ? (
@@ -568,7 +568,7 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
           </form>
 
           <div className="rounded-xl border border-white/10 bg-[#111520] overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[700px]">
+            <table className="w-full text-left text-xs min-w-175">
               <thead>
                 <tr className="border-b border-white/8 text-[11px] text-slate-400">
                   <th className="py-2.5 px-4">Par</th>
@@ -1009,7 +1009,7 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[780px]">
+              <table className="w-full text-left min-w-195">
                 <thead>
                   <tr className="border-b border-white/8 text-[11px] text-slate-400">
                     <th className="py-2 px-4">ID / Fecha</th>
@@ -1055,7 +1055,7 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
             <div className="px-4 py-3 border-b border-white/8 font-bold text-sm text-white">
               Auditoría de Cambios Quick Trading
             </div>
-            <table className="w-full text-left min-w-[680px]">
+            <table className="w-full text-left min-w-170">
               <thead>
                 <tr className="border-b border-white/8 text-[11px] text-slate-400">
                   <th className="py-2 px-4">Fecha</th>
