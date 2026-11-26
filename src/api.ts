@@ -16,8 +16,8 @@ function isVercelStaticHost(): boolean {
 }
 
 export async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
-  // On Vercel static deployment, handle all /api/* endpoints via the live Binance + local trading engine
-  if (isVercelStaticHost() && url.startsWith('/api/')) {
+  // Let real Vercel Serverless Functions (/api/oxapay/*) hit the backend directly
+  if (isVercelStaticHost() && url.startsWith('/api/') && !url.startsWith('/api/oxapay/')) {
     return handleVercelApiRequest<T>(url, options);
   }
 

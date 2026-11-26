@@ -806,6 +806,8 @@ export default function App() {
           {activeTab === 'wallet' && (
             <WalletView
               env={env}
+              userId={user.id}
+              userEmail={user.email}
               wallets={wallets}
               summary={walletSummary}
               transactions={walletTxs}

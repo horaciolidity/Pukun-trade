@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Copy, Check, RotateCcw, PlusCircle, ShieldAlert } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Copy, Check, RotateCcw, PlusCircle, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
 import { apiFetch, formatCurrency } from '../api';
 import { TradingEnv, WalletItem, WalletTransaction } from '../types';
 import { QrMatrix } from './QrMatrix';
 
 interface Props {
   env: TradingEnv;
+  userId?: string;
+  userEmail?: string;
   wallets: WalletItem[];
   summary: { totalUsdt: number; availableUsdt: number; lockedUsdt: number };
   transactions: WalletTransaction[];
@@ -25,10 +27,13 @@ const NETWORKS = [
   'Solana',
 ];
 
-export function WalletView({ env, wallets, summary, transactions, whitelist, onRefresh }: Props) {
+export function WalletView({ env, userId, userEmail, wallets, summary, transactions, whitelist, onRefresh }: Props) {
   const [activeTab, setActiveTab] = useState<'balances' | 'deposit' | 'withdraw' | 'whitelist'>('balances');
   const [selectedAsset, setSelectedAsset] = useState('USDT');
-  const [selectedNetwork, setSelectedNetwork] = useState('Arbitrum');
+  const [selectedNetwork, setSelectedNetwork] = useState('Tron');
+  const [oxaAddresses, setOxaAddresses] = useState<Record<string, string>>({});
+  const [oxaLoading, setOxaLoading] = useState(false);
+  const [oxaError, setOxaError] = useState('');
   const [depositAmount, setDepositAmount] = useState('1000');
   const [depositTxid, setDepositTxid] = useState('');
   const [withdrawAddr, setWithdrawAddr] = useState('');
@@ -40,7 +45,38 @@ export function WalletView({ env, wallets, summary, transactions, whitelist, onR
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   const currentWallet = wallets.find((w) => w.asset === selectedAsset) || wallets[0];
-  const depositAddress = currentWallet?.addresses?.[selectedNetwork] || currentWallet?.addresses?.Ethereum || '0x0000...';
+  const oxaAddressForNet = oxaAddresses[selectedNetwork] || '';
+  const depositAddress =
+    (env === 'REAL' && oxaAddressForNet) ||
+    currentWallet?.addresses?.[selectedNetwork] ||
+    currentWallet?.addresses?.[`${selectedNetwork} (TRC-20)`] ||
+    currentWallet?.addresses?.Ethereum ||
+    '0x0000...';
+
+  async function fetchOxaStaticAddress(net = selectedNetwork) {
+    if (!userId) return;
+    setOxaLoading(true);
+    setOxaError('');
+    try {
+      const res = await apiFetch<{ address: string; oxaNetwork?: string }>('/api/oxapay/static-address', {
+        method: 'POST',
+        body: JSON.stringify({ userId, email: userEmail || '', network: net }),
+      });
+      if (res?.address) {
+        setOxaAddresses((prev) => ({ ...prev, [net]: res.address }));
+      }
+    } catch (err) {
+      setOxaError(err instanceof Error ? err.message : 'No se pudo obtener dirección OxaPay');
+    } finally {
+      setOxaLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'deposit' && env === 'REAL' && userId && !oxaAddresses[selectedNetwork]) {
+      fetchOxaStaticAddress(selectedNetwork);
+    }
+  }, [activeTab, env, selectedNetwork, userId]);
 
   function copyAddress() {
     navigator.clipboard.writeText(depositAddress);
@@ -302,19 +338,45 @@ export function WalletView({ env, wallets, summary, transactions, whitelist, onR
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 rounded-xl border border-white/8 bg-[#090B10] p-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 rounded-xl border border-amber-500/20 bg-[#090B10] p-4">
               <QrMatrix value={depositAddress} size={132} />
               <div className="flex-1 min-w-0 space-y-2">
-                <div className="text-xs text-slate-400">Dirección asignada ({selectedNetwork})</div>
-                <div className="font-mono text-xs text-white break-all">{depositAddress}</div>
-                <button
-                  type="button"
-                  onClick={copyAddress}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/15 cursor-pointer"
-                >
-                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  <span>{copied ? 'Copiado' : 'Copiar Dirección'}</span>
-                </button>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="text-xs text-slate-400">Dirección asignada ({selectedNetwork})</div>
+                  {env === 'REAL' && oxaAddressForNet && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-400/35 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                      <Sparkles className="h-3 w-3" />
+                      OxaPay Única · Auto-Acreditación
+                    </span>
+                  )}
+                </div>
+                <div className="font-mono text-xs text-white break-all">
+                  {oxaLoading ? 'Generando dirección única en OxaPay...' : depositAddress}
+                </div>
+                {oxaError && env === 'REAL' && (
+                  <div className="text-[11px] text-amber-300">{oxaError}</div>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={copyAddress}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/15 cursor-pointer"
+                  >
+                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>{copied ? 'Copiado' : 'Copiar Dirección'}</span>
+                  </button>
+                  {env === 'REAL' && (
+                    <button
+                      type="button"
+                      onClick={() => fetchOxaStaticAddress(selectedNetwork)}
+                      disabled={oxaLoading}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/35 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/25 cursor-pointer"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${oxaLoading ? 'animate-spin' : ''}`} />
+                      <span>Generar Address OxaPay</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
