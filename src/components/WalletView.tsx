@@ -8,6 +8,7 @@ interface Props {
   env: TradingEnv;
   userId?: string;
   userEmail?: string;
+  kycStatus?: string;
   wallets: WalletItem[];
   summary: { totalUsdt: number; availableUsdt: number; lockedUsdt: number };
   transactions: WalletTransaction[];
@@ -26,13 +27,14 @@ const NETWORKS = [
   'TON',
 ];
 
-export function WalletView({ env, userId, userEmail, wallets, summary, transactions, whitelist, onRefresh }: Props) {
+export function WalletView({ env, userId, userEmail, kycStatus, wallets, summary, transactions, whitelist, onRefresh }: Props) {
   const [activeTab, setActiveTab] = useState<'balances' | 'deposit' | 'withdraw' | 'whitelist'>('balances');
   const [selectedAsset, setSelectedAsset] = useState('USDT');
   const [selectedNetwork, setSelectedNetwork] = useState('Tron');
   const [oxaAddresses, setOxaAddresses] = useState<Record<string, string>>({});
   const [oxaLoading, setOxaLoading] = useState(false);
   const [oxaError, setOxaError] = useState('');
+  const [withdrawing, setWithdrawing] = useState(false);
   const [depositAmount, setDepositAmount] = useState('1000');
   const [depositTxid, setDepositTxid] = useState('');
   const [withdrawAddr, setWithdrawAddr] = useState('');
@@ -50,9 +52,9 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
     env === 'REAL'
       ? oxaAddressForNet
       : currentWallet?.addresses?.[selectedNetwork] ||
-        currentWallet?.addresses?.[`${selectedNetwork} (TRC-20)`] ||
-        currentWallet?.addresses?.Ethereum ||
-        'DEMO-VIRTUAL-WALLET';
+      currentWallet?.addresses?.[`${selectedNetwork} (TRC-20)`] ||
+      currentWallet?.addresses?.Ethereum ||
+      'DEMO-VIRTUAL-WALLET';
 
   async function fetchOxaStaticAddress(net = selectedNetwork, asset = selectedAsset) {
     if (!userId) return;
@@ -132,26 +134,49 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
     }
   }
 
+  const withdrawAmountNum = parseFloat(withdrawAmt) || 0;
+  const withdrawUsdEstimate = withdrawAmountNum * (currentWallet?.usdPrice || 1);
+  const needsHighAmountVerification = withdrawUsdEstimate >= 99 && kycStatus !== 'VERIFIED';
+
   async function handleWithdraw(e: React.FormEvent) {
     e.preventDefault();
     setFeedback(null);
+
+    if (needsHighAmountVerification && withdraw2fa.trim().length < 6) {
+      setFeedback({
+        type: 'err',
+        text: 'Para retiros de $99 USD o más se requiere verificación KYC o ingresar tu código de doble factor (2FA).',
+      });
+      return;
+    }
+
+    setWithdrawing(true);
     try {
-      const res = await apiFetch<{ status: string }>('/api/wallet/withdraw', {
+      const res = await apiFetch<{ status: string; message?: string; trackId?: string }>('/api/oxapay/payout', {
         method: 'POST',
         body: JSON.stringify({
+          userId,
+          email: userEmail || '',
           env,
           asset: selectedAsset,
           network: selectedNetwork,
           address: withdrawAddr,
-          amount: parseFloat(withdrawAmt) || 0,
+          amount: withdrawAmountNum,
+          usdPrice: currentWallet?.usdPrice || 1,
           twoFactorCode: withdraw2fa,
         }),
       });
-      setFeedback({ type: 'ok', text: `Solicitud de retiro registrada (${res.status}).` });
+      setFeedback({
+        type: 'ok',
+        text: res.message || `Retiro automático procesado vía OxaPay (${res.status}).`,
+      });
       setWithdrawAmt('');
+      setWithdraw2fa('');
       onRefresh();
     } catch (err) {
-      setFeedback({ type: 'err', text: err instanceof Error ? err.message : 'Error solicitando retiro' });
+      setFeedback({ type: 'err', text: err instanceof Error ? err.message : 'Error procesando retiro automático' });
+    } finally {
+      setWithdrawing(false);
     }
   }
 
@@ -235,9 +260,8 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
               setActiveTab(t.id as typeof activeTab);
               setFeedback(null);
             }}
-            className={`px-3.5 py-1.5 rounded-md text-xs font-semibold cursor-pointer ${
-              activeTab === t.id ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-            }`}
+            className={`px-3.5 py-1.5 rounded-md text-xs font-semibold cursor-pointer ${activeTab === t.id ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
           >
             {t.label}
           </button>
@@ -246,11 +270,10 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
 
       {feedback && (
         <div
-          className={`rounded-xl px-4 py-3 text-xs border ${
-            feedback.type === 'ok'
+          className={`rounded-xl px-4 py-3 text-xs border ${feedback.type === 'ok'
               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
               : 'bg-red-500/10 border-red-500/30 text-red-300'
-          }`}
+            }`}
         >
           {feedback.text}
         </div>
@@ -438,8 +461,18 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
               </div>
             </div>
           ) : (
-            <form onSubmit={handleWithdraw} className="space-y-3">
-              <h2 className="font-display text-base font-bold text-white">Solicitud de Retiro (REAL)</h2>
+            <form onSubmit={handleWithdraw} className="space-y-3.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <h2 className="font-display text-base font-bold text-white">Retiro Automático (OxaPay)</h2>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-400/35 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                  <Sparkles className="h-3 w-3" />
+                  Fondos Disponibles 24/7
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Usamos infraestructura automática de <strong className="text-slate-200">OxaPay</strong> para que siempre
+                dispongas de tus fondos con envío directo a tu billetera externa.
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Activo</label>
@@ -477,36 +510,53 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
                   required
                   value={withdrawAddr}
                   onChange={(e) => setWithdrawAddr(e.target.value)}
-                  placeholder="Dirección de retiro verificada"
+                  placeholder="Pega tu dirección de billetera destino"
                   className="w-full rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 font-mono text-xs text-white"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Monto</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs text-slate-400">Monto ({selectedAsset})</label>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    Disponible: {currentWallet?.available ?? 0} {selectedAsset}
+                  </span>
+                </div>
                 <input
                   type="number"
                   step="any"
                   required
                   value={withdrawAmt}
                   onChange={(e) => setWithdrawAmt(e.target.value)}
+                  placeholder="Ej. 25"
                   className="w-full rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 font-mono text-sm text-white"
                 />
               </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Código 2FA (si está activo)</label>
-                <input
-                  type="text"
-                  value={withdraw2fa}
-                  onChange={(e) => setWithdraw2fa(e.target.value)}
-                  placeholder="6 dígitos"
-                  className="w-full rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 font-mono text-xs text-white"
-                />
-              </div>
+
+              {/* Only shown when withdrawal is >= $99 USD and user has no KYC verified */}
+              {needsHighAmountVerification && (
+                <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-3.5 space-y-2.5">
+                  <div className="text-xs font-semibold text-amber-300">
+                    Verificación requerida para montos desde $99 USD
+                  </div>
+                  <p className="text-[11px] text-amber-100/80">
+                    Para proteger tus fondos en retiros mayores o iguales a $99 USD, completa tu verificación KYC en Perfil o ingresa tu código de doble factor (2FA).
+                  </p>
+                  <input
+                    type="text"
+                    value={withdraw2fa}
+                    onChange={(e) => setWithdraw2fa(e.target.value)}
+                    placeholder="Código 2FA (6 dígitos)"
+                    className="w-full rounded-lg border border-amber-400/35 bg-[#090B10] px-3 py-2 font-mono text-xs text-white"
+                  />
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full rounded-lg bg-blue-600 py-2.5 text-xs font-semibold text-white hover:bg-blue-500 cursor-pointer"
+                disabled={withdrawing}
+                className="w-full rounded-lg bg-linear-to-r from-emerald-600 to-cyan-600 py-2.5 text-xs font-bold text-white hover:brightness-110 disabled:opacity-50 cursor-pointer"
               >
-                Enviar Solicitud de Retiro
+                {withdrawing ? 'Enviando vía OxaPay...' : 'Retirar Automáticamente'}
               </button>
             </form>
           )}
@@ -594,8 +644,8 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
                         tx.status === 'CONFIRMED'
                           ? 'text-emerald-400 font-semibold'
                           : tx.status === 'PENDING'
-                          ? 'text-amber-400 font-semibold'
-                          : 'text-red-400 font-semibold'
+                            ? 'text-amber-400 font-semibold'
+                            : 'text-red-400 font-semibold'
                       }
                     >
                       {tx.status}

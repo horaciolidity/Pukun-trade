@@ -709,7 +709,7 @@ export default function App() {
           >
             {env === 'DEMO'
               ? '<DEMO ACTIVO — DINERO VIRTUAL> · Las operaciones, órdenes y saldos están aislados y no tienen valor real.'
-              : '<MODO REAL ACTIVO> · Entorno separado estrictamente del saldo DEMO. Retiros requieren KYC y 2FA.'}
+              : '<MODO REAL ACTIVO> · Tus fondos están siempre disponibles 24/7 con depósitos y retiros automáticos vía OxaPay.'}
           </div>
         </header>
 
@@ -808,6 +808,7 @@ export default function App() {
               env={env}
               userId={user.id}
               userEmail={user.email}
+              kycStatus={user.kyc_status}
               wallets={wallets}
               summary={walletSummary}
               transactions={walletTxs}
