@@ -1,17 +1,35 @@
 import { createClient } from '@supabase/supabase-js';
 
-const NETWORK_MAP: Record<string, string> = {
+// Official OxaPay v1 network names (verified via https://api.oxapay.com/v1/common/networks)
+const V1_NETWORK_MAP: Record<string, string> = {
+  Tron: 'Tron Network',
+  'Tron (TRC-20)': 'Tron Network',
+  'BNB Smart Chain': 'Binance Smart Chain',
+  BSC: 'Binance Smart Chain',
+  Ethereum: 'Ethereum Network',
+  'Ethereum (ERC-20)': 'Ethereum Network',
+  Polygon: 'Polygon Network',
+  Solana: 'Solana Network',
+  Bitcoin: 'Bitcoin Network',
+  Base: 'Base Network',
+  TON: 'TON Network',
+  Dogecoin: 'Dogecoin Network',
+  Litecoin: 'Litecoin Network',
+  Ripple: 'Ripple',
+};
+
+const LEGACY_NETWORK_MAP: Record<string, string> = {
   Tron: 'TRC20',
   'Tron (TRC-20)': 'TRC20',
   'BNB Smart Chain': 'BEP20',
+  BSC: 'BEP20',
   Ethereum: 'ERC20',
   'Ethereum (ERC-20)': 'ERC20',
-  Polygon: 'POLYGON',
-  Arbitrum: 'ARBITRUM',
-  Optimism: 'OPTIMISM',
-  Base: 'BASE',
-  Bitcoin: 'BTC',
-  Solana: 'SOL',
+  Polygon: 'Polygon',
+  Solana: 'Solana',
+  Bitcoin: 'Bitcoin',
+  Base: 'Base',
+  TON: 'TON',
 };
 
 export default async function handler(req: any, res: any) {
@@ -30,8 +48,11 @@ export default async function handler(req: any, res: any) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
     const userId = String(body.userId || '').trim();
     const email = String(body.email || '').trim();
+    const currency = String(body.currency || body.asset || 'USDT').trim().toUpperCase();
     const network = String(body.network || 'Tron').trim();
-    const oxaNetwork = NETWORK_MAP[network] || network.toUpperCase();
+    const v1Network = V1_NETWORK_MAP[network] || network;
+    const legacyNetwork = LEGACY_NETWORK_MAP[network] || network;
+    const cacheKey = `${v1Network}`;
 
     if (!userId) {
       return res.status(400).json({ error: 'userId es requerido para generar tu dirección única.' });
@@ -41,39 +62,39 @@ export default async function handler(req: any, res: any) {
     const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
     const supabase = supabaseUrl && serviceKey ? createClient(supabaseUrl, serviceKey) : null;
 
-    // 1. Check if this user already has a static address for this network in Supabase
+    // 1. Check if this user already has a saved real OxaPay static address for this network
     if (supabase) {
       try {
         const { data: existing } = await supabase
           .from('user_deposit_addresses')
           .select('address')
           .eq('user_id', userId)
-          .eq('network', oxaNetwork)
+          .eq('network', cacheKey)
           .maybeSingle();
 
         if (existing?.address) {
           return res.status(200).json({
             address: existing.address,
             network,
-            oxaNetwork,
+            oxaNetwork: v1Network,
             provider: 'OXAPAY',
             cached: true,
           });
         }
       } catch {
-        // table may not exist yet — continue to OxaPay directly
+        // table may not exist yet — continue to OxaPay
       }
     }
 
     const appUrl = (process.env.APP_URL || 'https://pukun-trade.vercel.app').replace(/\/$/, '');
     const callbackUrl = `${appUrl}/api/oxapay/webhook`;
-    const orderId = `pukun_${userId}_${oxaNetwork}`;
-    const description = `Pukun Trade Deposit - ${email || userId} (${oxaNetwork})`;
+    const orderId = `pukun_${userId}_${legacyNetwork}`;
+    const description = `Pukun Trade - ${email || userId} (${v1Network})`;
 
     let address = '';
-    let lastErr = '';
+    let v1Error = '';
 
-    // 2. Call OxaPay v1 Static Address API
+    // 2. Call OxaPay v1 Static Address API with exact official network name
     try {
       const v1Res = await fetch('https://api.oxapay.com/v1/payment/static-address', {
         method: 'POST',
@@ -82,7 +103,7 @@ export default async function handler(req: any, res: any) {
           merchant_api_key: merchantKey,
         },
         body: JSON.stringify({
-          network: oxaNetwork,
+          network: v1Network,
           callback_url: callbackUrl,
           order_id: orderId,
           description,
@@ -92,20 +113,21 @@ export default async function handler(req: any, res: any) {
       const v1Json = (await v1Res.json()) as any;
       address = v1Json?.data?.address || v1Json?.address || '';
       if (!address) {
-        lastErr = v1Json?.message || v1Json?.error?.message || `OxaPay v1 status ${v1Res.status}`;
+        v1Error = v1Json?.message || v1Json?.error?.message || `OxaPay v1 HTTP ${v1Res.status}`;
       }
     } catch (e) {
-      lastErr = e instanceof Error ? e.message : 'Error OxaPay v1';
+      v1Error = e instanceof Error ? e.message : 'Error conectando con OxaPay v1';
     }
 
-    // 3. Fallback to OxaPay Legacy Static Address endpoint if v1 didn't return an address
+    // 3. Fallback to OxaPay Legacy Static Address API (includes required currency + network)
     if (!address) {
       const legacyRes = await fetch('https://api.oxapay.com/merchants/request/staticaddress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           merchant: merchantKey,
-          network: oxaNetwork,
+          currency,
+          network: legacyNetwork,
           callbackUrl,
           orderId,
           description,
@@ -114,9 +136,11 @@ export default async function handler(req: any, res: any) {
       const legacyJson = (await legacyRes.json()) as any;
       address = legacyJson?.address || legacyJson?.data?.address || '';
       if (!address) {
-        return res.status(502).json({
-          error: legacyJson?.message || lastErr || `OxaPay no devolvió dirección para la red ${oxaNetwork}.`,
-        });
+        const finalMsg =
+          v1Error && v1Error.toLowerCase().includes('invalid')
+            ? `OxaPay rechazó la clave o red (${v1Error}). Verifica tu Merchant API Key en OxaPay Dashboard -> Merchant API.`
+            : legacyJson?.message || v1Error || `OxaPay no devolvió dirección para ${currency} en ${v1Network}.`;
+        return res.status(502).json({ error: finalMsg });
       }
     }
 
@@ -127,7 +151,7 @@ export default async function handler(req: any, res: any) {
           {
             user_id: userId,
             user_email: email,
-            network: oxaNetwork,
+            network: cacheKey,
             address,
             provider: 'OXAPAY',
           },
@@ -141,7 +165,7 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({
       address,
       network,
-      oxaNetwork,
+      oxaNetwork: v1Network,
       provider: 'OXAPAY',
       cached: false,
     });
@@ -151,4 +175,3 @@ export default async function handler(req: any, res: any) {
     });
   }
 }
-

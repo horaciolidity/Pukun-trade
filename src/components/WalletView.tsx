@@ -16,15 +16,14 @@ interface Props {
 }
 
 const NETWORKS = [
-  'Bitcoin',
-  'Ethereum',
-  'BNB Smart Chain',
-  'Polygon',
-  'Arbitrum',
-  'Optimism',
-  'Base',
   'Tron',
+  'BNB Smart Chain',
+  'Ethereum',
+  'Polygon',
   'Solana',
+  'Bitcoin',
+  'Base',
+  'TON',
 ];
 
 export function WalletView({ env, userId, userEmail, wallets, summary, transactions, whitelist, onRefresh }: Props) {
@@ -46,21 +45,23 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
 
   const currentWallet = wallets.find((w) => w.asset === selectedAsset) || wallets[0];
   const oxaAddressForNet = oxaAddresses[selectedNetwork] || '';
+  // In REAL mode, NEVER display mock/placeholder addresses — only show real OxaPay static address
   const depositAddress =
-    (env === 'REAL' && oxaAddressForNet) ||
-    currentWallet?.addresses?.[selectedNetwork] ||
-    currentWallet?.addresses?.[`${selectedNetwork} (TRC-20)`] ||
-    currentWallet?.addresses?.Ethereum ||
-    '0x0000...';
+    env === 'REAL'
+      ? oxaAddressForNet
+      : currentWallet?.addresses?.[selectedNetwork] ||
+        currentWallet?.addresses?.[`${selectedNetwork} (TRC-20)`] ||
+        currentWallet?.addresses?.Ethereum ||
+        'DEMO-VIRTUAL-WALLET';
 
-  async function fetchOxaStaticAddress(net = selectedNetwork) {
+  async function fetchOxaStaticAddress(net = selectedNetwork, asset = selectedAsset) {
     if (!userId) return;
     setOxaLoading(true);
     setOxaError('');
     try {
       const res = await apiFetch<{ address: string; oxaNetwork?: string }>('/api/oxapay/static-address', {
         method: 'POST',
-        body: JSON.stringify({ userId, email: userEmail || '', network: net }),
+        body: JSON.stringify({ userId, email: userEmail || '', network: net, currency: asset }),
       });
       if (res?.address) {
         setOxaAddresses((prev) => ({ ...prev, [net]: res.address }));
@@ -74,9 +75,9 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
 
   useEffect(() => {
     if (activeTab === 'deposit' && env === 'REAL' && userId && !oxaAddresses[selectedNetwork]) {
-      fetchOxaStaticAddress(selectedNetwork);
+      fetchOxaStaticAddress(selectedNetwork, selectedAsset);
     }
-  }, [activeTab, env, selectedNetwork, userId]);
+  }, [activeTab, env, selectedNetwork, selectedAsset, userId]);
 
   function copyAddress() {
     navigator.clipboard.writeText(depositAddress);
@@ -339,7 +340,13 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 rounded-xl border border-amber-500/20 bg-[#090B10] p-4">
-              <QrMatrix value={depositAddress} size={132} />
+              {depositAddress ? (
+                <QrMatrix value={depositAddress} size={132} />
+              ) : (
+                <div className="h-[132px] w-[132px] rounded-lg border border-white/10 bg-[#111520] flex items-center justify-center text-center p-2 text-[10px] text-slate-400 shrink-0">
+                  {oxaLoading ? 'Conectando OxaPay...' : 'Sin dirección real aún'}
+                </div>
+              )}
               <div className="flex-1 min-w-0 space-y-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="text-xs text-slate-400">Dirección asignada ({selectedNetwork})</div>
@@ -351,24 +358,30 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
                   )}
                 </div>
                 <div className="font-mono text-xs text-white break-all">
-                  {oxaLoading ? 'Generando dirección única en OxaPay...' : depositAddress}
+                  {oxaLoading
+                    ? 'Generando dirección única real en OxaPay...'
+                    : depositAddress || 'Haz clic en "Generar Address OxaPay" para crear tu dirección real.'}
                 </div>
                 {oxaError && env === 'REAL' && (
-                  <div className="text-[11px] text-amber-300">{oxaError}</div>
+                  <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">
+                    {oxaError}
+                  </div>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={copyAddress}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/15 cursor-pointer"
-                  >
-                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                    <span>{copied ? 'Copiado' : 'Copiar Dirección'}</span>
-                  </button>
+                  {depositAddress && (
+                    <button
+                      type="button"
+                      onClick={copyAddress}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/15 cursor-pointer"
+                    >
+                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span>{copied ? 'Copiado' : 'Copiar Dirección'}</span>
+                    </button>
+                  )}
                   {env === 'REAL' && (
                     <button
                       type="button"
-                      onClick={() => fetchOxaStaticAddress(selectedNetwork)}
+                      onClick={() => fetchOxaStaticAddress(selectedNetwork, selectedAsset)}
                       disabled={oxaLoading}
                       className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/35 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/25 cursor-pointer"
                     >
