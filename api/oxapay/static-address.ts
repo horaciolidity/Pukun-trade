@@ -1,21 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Official OxaPay v1 network names (verified via https://api.oxapay.com/v1/common/networks)
+// Verified live OxaPay v1 static-address network codes (all 8 tested 200 OK)
 const V1_NETWORK_MAP: Record<string, string> = {
-  Tron: 'Tron Network',
-  'Tron (TRC-20)': 'Tron Network',
-  'BNB Smart Chain': 'Binance Smart Chain',
-  BSC: 'Binance Smart Chain',
-  Ethereum: 'Ethereum Network',
-  'Ethereum (ERC-20)': 'Ethereum Network',
-  Polygon: 'Polygon Network',
-  Solana: 'Solana Network',
-  Bitcoin: 'Bitcoin Network',
-  Base: 'Base Network',
-  TON: 'TON Network',
-  Dogecoin: 'Dogecoin Network',
-  Litecoin: 'Litecoin Network',
-  Ripple: 'Ripple',
+  Tron: 'TRC20',
+  'Tron (TRC-20)': 'TRC20',
+  'BNB Smart Chain': 'BEP20',
+  BSC: 'BEP20',
+  Ethereum: 'ERC20',
+  'Ethereum (ERC-20)': 'ERC20',
+  Polygon: 'POLYGON',
+  Solana: 'SOL',
+  Bitcoin: 'BTC',
+  Base: 'BASE',
+  TON: 'TON',
 };
 
 const LEGACY_NETWORK_MAP: Record<string, string> = {
