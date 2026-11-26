@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Copy, Check, RotateCcw, PlusCircle, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
+import { Copy, Check, RotateCcw, PlusCircle, ShieldAlert, Sparkles } from 'lucide-react';
 import { apiFetch, formatCurrency } from '../api';
 import { TradingEnv, WalletItem, WalletTransaction } from '../types';
 import { QrMatrix } from './QrMatrix';
@@ -74,10 +74,10 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
   }
 
   useEffect(() => {
-    if (activeTab === 'deposit' && env === 'REAL' && userId && !oxaAddresses[selectedNetwork]) {
+    if (env === 'REAL' && userId && !oxaAddresses[selectedNetwork] && !oxaLoading) {
       fetchOxaStaticAddress(selectedNetwork, selectedAsset);
     }
-  }, [activeTab, env, selectedNetwork, selectedAsset, userId]);
+  }, [env, selectedNetwork, selectedAsset, userId]);
 
   function copyAddress() {
     navigator.clipboard.writeText(depositAddress);
@@ -359,8 +359,8 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
                 </div>
                 <div className="font-mono text-xs text-white break-all">
                   {oxaLoading
-                    ? 'Generando dirección única real en OxaPay...'
-                    : depositAddress || 'Haz clic en "Generar Address OxaPay" para crear tu dirección real.'}
+                    ? 'Cargando tu dirección permanente de depósito...'
+                    : depositAddress || 'Dirección de depósito en aprovisionamiento...'}
                 </div>
                 {oxaError && env === 'REAL' && (
                   <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-[11px] text-red-300">
@@ -376,17 +376,6 @@ export function WalletView({ env, userId, userEmail, wallets, summary, transacti
                     >
                       {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                       <span>{copied ? 'Copiado' : 'Copiar Dirección'}</span>
-                    </button>
-                  )}
-                  {env === 'REAL' && (
-                    <button
-                      type="button"
-                      onClick={() => fetchOxaStaticAddress(selectedNetwork, selectedAsset)}
-                      disabled={oxaLoading}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/35 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-500/25 cursor-pointer"
-                    >
-                      <RefreshCw className={`h-3.5 w-3.5 ${oxaLoading ? 'animate-spin' : ''}`} />
-                      <span>Generar Address OxaPay</span>
                     </button>
                   )}
                 </div>
