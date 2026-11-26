@@ -286,6 +286,43 @@ export interface AdminPlatformFees {
   withdrawFeePct: number;
 }
 
+export type MissionPlatform = 'TELEGRAM' | 'YOUTUBE' | 'X' | 'INSTAGRAM' | 'TIKTOK' | 'REFERRAL' | 'CUSTOM';
+
+export interface AdminMissionTask {
+  id: string;
+  platform: MissionPlatform;
+  title: string;
+  description: string;
+  rewardUsdt: number;
+  rewardAsset: string;
+  actionUrl: string;
+  requiresProof: boolean;
+  bannerImageUrl?: string;
+  ipfsCid?: string;
+  active: boolean;
+  createdAt: number;
+}
+
+export interface MissionClaim {
+  id: string;
+  missionId: string;
+  proofUrl: string;
+  status: 'COMPLETED' | 'PENDING_REVIEW';
+  rewardUsdt: number;
+  createdAt: number;
+}
+
+export interface CryptoNewsItem {
+  id: string;
+  title: string;
+  body: string;
+  url: string;
+  imageUrl: string;
+  source: string;
+  categories: string;
+  publishedOn: number;
+}
+
 export interface CustomToken {
   id: string;
   name: string;

@@ -3,6 +3,7 @@ import { computeQuickTradeSettlement } from './utils/quickTradeMath';
 import { fetchDepositGatewayConfig, recordUserTxInSupabase } from './supabase';
 import type {
   AdminFutureEvent,
+  AdminMissionTask,
   AdminPlatformFees,
   AdminPromoBanner,
   AppNotification,
@@ -13,6 +14,7 @@ import type {
   LiveSignal,
   Market,
   MarketIntelItem,
+  MissionClaim,
   OrderBook,
   QuickTradeItem,
   SpotOrder,
@@ -54,6 +56,8 @@ interface EngineState {
   fees: AdminPlatformFees;
   promoBanners: AdminPromoBanner[];
   futureEvents: AdminFutureEvent[];
+  missions: AdminMissionTask[];
+  missionClaims: MissionClaim[];
   referralSettings: {
     inviteRewardUsdt: number;
     firstDepositBonusPct: number;
@@ -344,6 +348,87 @@ function createInitialState(): EngineState {
         active: true,
       },
     ],
+    missions: [
+      {
+        id: 'mis_tg',
+        platform: 'TELEGRAM',
+        title: 'Únete a nuestro Canal Oficial de Telegram',
+        description: 'Recibe señales, sorteos semanales y anuncios exclusivos de Pukun Trade.',
+        rewardUsdt: 2,
+        rewardAsset: 'USDT',
+        actionUrl: 'https://t.me/pukuntrade',
+        requiresProof: false,
+        bannerImageUrl: '/banner-bots.jpg',
+        active: true,
+        createdAt: now,
+      },
+      {
+        id: 'mis_yt',
+        platform: 'YOUTUBE',
+        title: 'Suscríbete al canal de YouTube de Pukun Trade',
+        description: 'Aprende estrategias de Futuros 125x, Bots IA y Quick Trading.',
+        rewardUsdt: 2,
+        rewardAsset: 'USDT',
+        actionUrl: 'https://youtube.com/@pukuntrade',
+        requiresProof: false,
+        bannerImageUrl: '/banner-trading.jpg',
+        active: true,
+        createdAt: now,
+      },
+      {
+        id: 'mis_x',
+        platform: 'X',
+        title: 'Síguenos en X (Twitter) y repostea el post fijado',
+        description: 'Mantente al día con noticias cripto y eventos relámpago.',
+        rewardUsdt: 2,
+        rewardAsset: 'USDT',
+        actionUrl: 'https://x.com/pukuntrade',
+        requiresProof: false,
+        bannerImageUrl: '/banner-launchpad.jpg',
+        active: true,
+        createdAt: now,
+      },
+      {
+        id: 'mis_ig',
+        platform: 'INSTAGRAM',
+        title: 'Síguenos en Instagram @pukuntrade',
+        description: 'Comparte tus tarjetas de PnL etiquetándonos en historias.',
+        rewardUsdt: 2,
+        rewardAsset: 'USDT',
+        actionUrl: 'https://instagram.com/pukuntrade',
+        requiresProof: false,
+        bannerImageUrl: '/patagonia-sunset-bg.jpg',
+        active: true,
+        createdAt: now,
+      },
+      {
+        id: 'mis_tiktok',
+        platform: 'TIKTOK',
+        title: 'Crea un TikTok de Pukun Trade con tu código referido',
+        description: 'Graba un video mostrando Quick Trade o Futuros con tu enlace de referido y gana cripto.',
+        rewardUsdt: 15,
+        rewardAsset: 'USDT',
+        actionUrl: 'https://tiktok.com',
+        requiresProof: true,
+        bannerImageUrl: '/og-ref-40usdt.jpg',
+        active: true,
+        createdAt: now,
+      },
+      {
+        id: 'mis_ref_bonus',
+        platform: 'REFERRAL',
+        title: 'Invita amigos con tu enlace y gana 40 USDT',
+        description: 'Comparte tu código único: cada referido activo suma recompensas directas + 20% de comisiones.',
+        rewardUsdt: 40,
+        rewardAsset: 'USDT',
+        actionUrl: '',
+        requiresProof: false,
+        bannerImageUrl: '/og-ref-40usdt.jpg',
+        active: true,
+        createdAt: now,
+      },
+    ],
+    missionClaims: [],
     referralSettings: {
       inviteRewardUsdt: 40,
       firstDepositBonusPct: 10,
@@ -677,8 +762,42 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
       fees: state.fees,
       promoBanners: state.promoBanners,
       futureEvents: state.futureEvents,
+      missions: state.missions,
       referralSettings: state.referralSettings,
     } as unknown as T;
+  }
+  if (pathname === '/api/missions' && method === 'GET') {
+    return {
+      missions: state.missions.filter((m) => m.active),
+      claims: state.missionClaims,
+    } as unknown as T;
+  }
+  if (pathname === '/api/missions/claim' && method === 'POST') {
+    const missionId = String(body.missionId || '');
+    const proofUrl = String(body.proofUrl || '').trim();
+    const mission = state.missions.find((m) => m.id === missionId);
+    if (!mission) throw new Error('Misión no encontrada.');
+    if (state.missionClaims.some((c) => c.missionId === missionId)) {
+      throw new Error('Ya reclamaste o enviaste esta misión.');
+    }
+    if (mission.requiresProof && !proofUrl) {
+      throw new Error('Pega el enlace de tu publicación (ej. TikTok/YouTube) para validar el premio.');
+    }
+    const claim: MissionClaim = {
+      id: uid('clm'),
+      missionId,
+      proofUrl,
+      status: mission.requiresProof ? 'PENDING_REVIEW' : 'COMPLETED',
+      rewardUsdt: mission.rewardUsdt,
+      createdAt: Date.now(),
+    };
+    state.missionClaims.unshift(claim);
+    if (claim.status === 'COMPLETED') {
+      const w = getOrCreateWallet(state, 'DEMO', mission.rewardAsset || 'USDT', 1);
+      w.available = Number((w.available + mission.rewardUsdt).toFixed(2));
+    }
+    saveState(state);
+    return { claim } as unknown as T;
   }
   if (pathname === '/api/markets/favorite' && method === 'POST') {
     const sym = String(body.symbol || '');
@@ -1377,6 +1496,7 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
         fees: state.fees,
         promo_banners: state.promoBanners,
         future_events: state.futureEvents,
+        missions: state.missions,
       },
       auditLogs: [],
     } as unknown as T;
@@ -1391,6 +1511,8 @@ export async function handleVercelApiRequest<T>(url: string, options: RequestIni
       state.promoBanners = Array.isArray(val) ? val : state.promoBanners;
     } else if (key === 'future_events') {
       state.futureEvents = Array.isArray(val) ? val : state.futureEvents;
+    } else if (key === 'missions') {
+      state.missions = Array.isArray(val) ? val : state.missions;
     } else if (key === 'referral_settings') {
       state.referralSettings = { ...state.referralSettings, ...val };
     } else if (key === 'quick_trading') {

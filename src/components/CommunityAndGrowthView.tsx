@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Send, Pin, Flag, Trash2, Users, Trophy, BookOpen, Copy, Check } from 'lucide-react';
-import { apiFetch, formatCurrency } from '../api';
-import { ChatMessage, UserProfile } from '../types';
+import { Send, Pin, Flag, Trash2, Users, Trophy, BookOpen, Copy, Check, ExternalLink, Sparkles, Gift } from 'lucide-react';
+import { apiFetch, formatCurrency, resolveIpfsUrl } from '../api';
+import { AdminMissionTask, ChatMessage, MissionClaim, UserProfile } from '../types';
 
 interface Props {
   mode: 'community' | 'referrals' | 'competitions' | 'academy';
@@ -88,8 +88,22 @@ export function CommunityAndGrowthView({ mode, user, wsLatestChat }: Props) {
     leaderboard: Array<{ userId: string; name: string; equityUsdt: number; roiPct: number; ordersCount: number }>;
   } | null>(null);
   const [copiedRef, setCopiedRef] = useState(false);
+  const [missions, setMissions] = useState<AdminMissionTask[]>([]);
+  const [claims, setClaims] = useState<MissionClaim[]>([]);
+  const [proofInputs, setProofInputs] = useState<Record<string, string>>({});
+  const [missionMsg, setMissionMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   const isMod = ['MODERATOR', 'ADMIN', 'SUPERADMIN'].includes(user.role);
+
+  async function loadMissions() {
+    try {
+      const res = await apiFetch<{ missions: AdminMissionTask[]; claims: MissionClaim[] }>('/api/missions');
+      if (Array.isArray(res?.missions)) setMissions(res.missions);
+      if (Array.isArray(res?.claims)) setClaims(res.claims);
+    } catch {
+      // ignore
+    }
+  }
 
   async function loadRoom(r: string) {
     try {
@@ -103,10 +117,11 @@ export function CommunityAndGrowthView({ mode, user, wsLatestChat }: Props) {
   useEffect(() => {
     if (mode === 'community') loadRoom(room);
     if (mode === 'referrals') {
-      apiFetch<typeof referralsData>('/api/referrals').then(setReferralsData).catch(() => {});
+      apiFetch<typeof referralsData>('/api/referrals').then(setReferralsData).catch(() => { });
+      loadMissions();
     }
     if (mode === 'competitions') {
-      apiFetch<typeof compData>('/api/competitions').then(setCompData).catch(() => {});
+      apiFetch<typeof compData>('/api/competitions').then(setCompData).catch(() => { });
     }
   }, [mode, room]);
 
@@ -216,6 +231,138 @@ export function CommunityAndGrowthView({ mode, user, wsLatestChat }: Props) {
           </div>
         </div>
 
+        <div className="rounded-xl border border-amber-500/25 bg-[#111520] p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="font-display text-base font-bold text-white flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-400" />
+                <span>Misiones, Redes Sociales & Premios en Cripto</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Visita nuestras redes oficiales (TG, YT, X, IG) o crea contenido (TikTok/YouTube) con tu código{' '}
+                <span className="font-mono text-cyan-300 font-bold">{user.referral_code}</span> y gana USDT.
+              </p>
+            </div>
+          </div>
+
+          {missionMsg && (
+            <div
+              className={`rounded-lg border px-3.5 py-2.5 text-xs ${missionMsg.type === 'ok'
+                  ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300'
+                  : 'border-red-500/35 bg-red-500/10 text-red-300'
+                }`}
+            >
+              {missionMsg.text}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {missions.map((m) => {
+              const claim = claims.find((c) => c.missionId === m.id);
+              return (
+                <div
+                  key={m.id}
+                  className="rounded-2xl border border-white/10 bg-[#090B10] overflow-hidden flex flex-col justify-between shadow-lg"
+                >
+                  {m.bannerImageUrl && (
+                    <div className="relative h-28 overflow-hidden">
+                      <img
+                        src={resolveIpfsUrl(m.bannerImageUrl)}
+                        alt={m.title}
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-linear-to-t from-[#090B10] via-[#090B10]/45 to-transparent" />
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                        <span className="rounded-full bg-black/75 border border-cyan-400/40 px-2.5 py-0.5 text-[10px] font-bold text-cyan-300">
+                          {m.platform}
+                        </span>
+                        <span className="rounded-full bg-emerald-500/25 border border-emerald-400/50 px-2.5 py-0.5 text-[10px] font-mono font-bold text-emerald-300">
+                          +${m.rewardUsdt} {m.rewardAsset}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-display text-sm font-bold text-white">{m.title}</h3>
+                      <p className="text-[11px] text-slate-400 mt-1">{m.description}</p>
+                    </div>
+
+                    {claim ? (
+                      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-300 flex items-center gap-2">
+                        <Check className="h-4 w-4" />
+                        <span>
+                          {claim.status === 'COMPLETED'
+                            ? `Premio +$${claim.rewardUsdt} USDT acreditado`
+                            : 'Prueba enviada · En revisión por el equipo'}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {m.requiresProof && (
+                          <input
+                            type="url"
+                            value={proofInputs[m.id] || ''}
+                            onChange={(e) => setProofInputs((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                            placeholder="Pega el enlace de tu TikTok / video con tu referido..."
+                            className="w-full rounded-lg border border-white/10 bg-[#111520] px-3 py-1.5 text-xs text-white"
+                          />
+                        )}
+                        <div className="flex items-center gap-2">
+                          {m.actionUrl && (
+                            <a
+                              href={m.actionUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 px-3 py-2 text-xs font-semibold text-slate-200"
+                            >
+                              <span>Ir a {m.platform}</span>
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setMissionMsg(null);
+                              try {
+                                const res = await apiFetch<{ claim: MissionClaim }>('/api/missions/claim', {
+                                  method: 'POST',
+                                  body: JSON.stringify({
+                                    missionId: m.id,
+                                    proofUrl: proofInputs[m.id] || '',
+                                  }),
+                                });
+                                setMissionMsg({
+                                  type: 'ok',
+                                  text:
+                                    res.claim.status === 'COMPLETED'
+                                      ? `¡Misión completada! +$${m.rewardUsdt} ${m.rewardAsset} acreditados.`
+                                      : '¡Prueba enviada! Nuestro equipo verificará tu enlace y acreditará tu premio.',
+                                });
+                                loadMissions();
+                              } catch (err) {
+                                setMissionMsg({
+                                  type: 'err',
+                                  text: err instanceof Error ? err.message : 'Error reclamando misión',
+                                });
+                              }
+                            }}
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-linear-to-r from-amber-500 to-cyan-500 py-2 px-3 text-xs font-bold text-slate-950 hover:brightness-110 cursor-pointer"
+                          >
+                            <Gift className="h-3.5 w-3.5" />
+                            <span>{m.requiresProof ? 'Enviar Prueba y Reclamar' : 'Reclamar Premio'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="rounded-xl border border-white/10 bg-[#111520] p-5">
           <h2 className="text-sm font-semibold text-white mb-3">Invitados Registrados ({referralsData?.referrals.length || 0})</h2>
           {!referralsData || referralsData.referrals.length === 0 ? (
@@ -309,9 +456,8 @@ export function CommunityAndGrowthView({ mode, user, wsLatestChat }: Props) {
               key={r.id}
               type="button"
               onClick={() => setRoom(r.id)}
-              className={`px-3 py-2 rounded-lg text-xs font-medium text-left whitespace-nowrap cursor-pointer ${
-                room === r.id ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'
-              }`}
+              className={`px-3 py-2 rounded-lg text-xs font-medium text-left whitespace-nowrap cursor-pointer ${room === r.id ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                }`}
             >
               {r.label}
             </button>
@@ -329,9 +475,8 @@ export function CommunityAndGrowthView({ mode, user, wsLatestChat }: Props) {
           {messages.map((m) => (
             <div
               key={m.id}
-              className={`rounded-lg p-3 text-xs border ${
-                m.pinned ? 'border-blue-500/35 bg-blue-500/10' : 'border-white/6 bg-[#090B10]'
-              }`}
+              className={`rounded-lg p-3 text-xs border ${m.pinned ? 'border-blue-500/35 bg-blue-500/10' : 'border-white/6 bg-[#090B10]'
+                }`}
             >
               <div className="flex items-center justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2">

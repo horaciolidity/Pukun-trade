@@ -1,8 +1,10 @@
-import { ArrowUpRight, ArrowDownRight, Bot, Wallet, Star, Zap, BookOpen, TrendingUp, Rocket, Sparkles } from 'lucide-react';
-import { formatCurrency, formatPrice } from '../api';
+import { useEffect, useState } from 'react';
+import { ArrowUpRight, ArrowDownRight, Bot, Wallet, Star, Zap, BookOpen, TrendingUp, Rocket, Sparkles, Newspaper, ExternalLink, Gift, RefreshCw } from 'lucide-react';
+import { apiFetch, formatCurrency, formatPrice, resolveIpfsUrl } from '../api';
 import {
   AdminFutureEvent,
   AdminPromoBanner,
+  CryptoNewsItem,
   ExperienceLevel,
   FuturesPosition,
   LiveSignal,
@@ -76,6 +78,64 @@ export function DashboardView({
   const favMarkets = markets.filter((m) => favorites.includes(m.symbol));
   const displayMarkets = favMarkets.length > 0 ? favMarkets : markets.slice(0, 4);
 
+  const [news, setNews] = useState<CryptoNewsItem[]>([]);
+  const [newsFilter, setNewsFilter] = useState<'ALL' | 'CRYPTO' | 'TECH' | 'MARKETS'>('ALL');
+  const [newsLoading, setNewsLoading] = useState(false);
+
+  async function loadLiveNews() {
+    setNewsLoading(true);
+    try {
+      const res = await apiFetch<{ articles: CryptoNewsItem[] }>('/api/news/crypto?lang=ES');
+      if (Array.isArray(res?.articles) && res.articles.length > 0) {
+        setNews(res.articles);
+        return;
+      }
+    } catch {
+      // fallback directly to CryptoCompare public API
+    }
+    try {
+      const r = await fetch('https://min-api.cryptocompare.com/data/v2/news/?lang=ES');
+      if (r.ok) {
+        const json = (await r.json()) as { Data?: Array<Record<string, any>> };
+        const items: CryptoNewsItem[] = (json.Data || []).slice(0, 12).map((item) => ({
+          id: String(item.id || Math.random()),
+          title: String(item.title || ''),
+          body: String(item.body || '').replace(/<[^>]+>/g, '').slice(0, 200),
+          url: String(item.url || '#'),
+          imageUrl: String(item.imageurl || '/banner-trading.jpg'),
+          source: String(item.source_info?.name || item.source || 'Crypto News'),
+          categories: String(item.categories || 'Crypto'),
+          publishedOn: Number(item.published_on || Math.floor(Date.now() / 1000)),
+        }));
+        setNews(items);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setNewsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadLiveNews();
+  }, []);
+
+  const filteredNews = news.filter((n) => {
+    if (newsFilter === 'ALL') return true;
+    const cat = `${n.categories} ${n.title}`.toLowerCase();
+    if (newsFilter === 'CRYPTO') return cat.includes('btc') || cat.includes('bitcoin') || cat.includes('eth') || cat.includes('crypto') || cat.includes('cripto');
+    if (newsFilter === 'TECH') return cat.includes('tech') || cat.includes('blockchain') || cat.includes('ai') || cat.includes('ia') || cat.includes('web3') || cat.includes('defi');
+    return cat.includes('market') || cat.includes('trading') || cat.includes('precio') || cat.includes('invers') || cat.includes('etf') || cat.includes('bolsa');
+  });
+
+  function formatRelativeTime(unixSec: number): string {
+    const mins = Math.max(1, Math.floor((Date.now() / 1000 - unixSec) / 60));
+    if (mins < 60) return `Hace ${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `Hace ${hrs} h`;
+    return `Hace ${Math.floor(hrs / 24)} d`;
+  }
+
   return (
     <div className="space-y-6">
       {/* Pukun Trade Ancestral-Tech Welcome Banner */}
@@ -137,7 +197,7 @@ export function DashboardView({
               >
                 <div
                   className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none"
-                  style={{ backgroundImage: `url('${banner.imageUrl}')` }}
+                  style={{ backgroundImage: `url('${resolveIpfsUrl(banner.imageUrl)}')` }}
                 />
                 <div className="absolute inset-0 bg-linear-to-r from-[#090B10]/95 via-[#090B10]/80 to-transparent pointer-events-none" />
                 <div className="relative space-y-1 min-w-0">
@@ -429,6 +489,123 @@ export function DashboardView({
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Live Crypto, Technology, Investment & Events News Section */}
+      <div className="rounded-2xl border border-amber-500/20 bg-[#111520] p-4 sm:p-5 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-xl bg-amber-500/15 border border-amber-400/35 flex items-center justify-center text-amber-400 shrink-0">
+              <Newspaper className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <h2 className="font-display text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                <span>Noticias en Vivo · Crypto, Tecnología & Mercados</span>
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              </h2>
+              <p className="text-[11px] text-slate-400">
+                Información real actualizada sobre criptomonedas, IA, inversión, ganancias y eventos globales
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(
+              [
+                { id: 'ALL', label: 'Todas' },
+                { id: 'CRYPTO', label: 'Crypto' },
+                { id: 'TECH', label: 'Tecnología' },
+                { id: 'MARKETS', label: 'Inversión' },
+              ] as const
+            ).map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setNewsFilter(f.id)}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${newsFilter === f.id
+                    ? 'bg-amber-500 text-slate-950'
+                    : 'bg-white/5 text-slate-400 hover:text-white'
+                  }`}
+              >
+                {f.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={loadLiveNews}
+              disabled={newsLoading}
+              className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-300 hover:text-white cursor-pointer"
+              title="Actualizar noticias"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${newsLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+          {(filteredNews.length > 0 ? filteredNews : news).slice(0, 6).map((item) => (
+            <a
+              key={item.id}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group rounded-xl border border-white/10 bg-[#090B10] overflow-hidden hover:border-amber-400/40 transition-all flex flex-col"
+            >
+              <div className="relative h-32 overflow-hidden bg-[#111520]">
+                <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  loading="lazy"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/banner-trading.jpg';
+                  }}
+                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-[#090B10] via-[#090B10]/30 to-transparent" />
+                <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between text-[10px]">
+                  <span className="rounded bg-black/70 backdrop-blur-sm border border-white/10 px-2 py-0.5 font-semibold text-amber-300">
+                    {item.source}
+                  </span>
+                  <span className="text-slate-300 font-mono">{formatRelativeTime(item.publishedOn)}</span>
+                </div>
+              </div>
+              <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-white line-clamp-2 group-hover:text-amber-300 transition-colors">
+                    {item.title}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 line-clamp-2 mt-1">{item.body}</p>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-cyan-400 font-semibold pt-1 border-t border-white/6">
+                  <span className="truncate max-w-44 text-slate-500">{item.categories.split('|').slice(0, 2).join(' · ')}</span>
+                  <span className="inline-flex items-center gap-1 shrink-0">
+                    Leer <ExternalLink className="h-3 w-3" />
+                  </span>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        {/* Missions & Social Crypto Rewards Teaser */}
+        <div className="rounded-xl border border-cyan-500/25 bg-linear-to-r from-amber-500/10 via-[#090B10] to-cyan-500/10 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Gift className="h-5 w-5 text-amber-400 shrink-0" />
+            <div className="text-xs">
+              <span className="font-bold text-white">Gana Cripto Completando Misiones: </span>
+              <span className="text-slate-300">
+                Visita Telegram, YouTube, X, Instagram o sube un TikTok de Pukun Trade con tu referido y recibe USDT.
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('referrals')}
+            className="rounded-lg bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            Ver Misiones & Referidos
+          </button>
         </div>
       </div>
 

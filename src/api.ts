@@ -16,8 +16,10 @@ function isVercelStaticHost(): boolean {
 }
 
 export async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
-  // Let real Vercel Serverless Functions (/api/oxapay/*) hit the backend directly
-  if (isVercelStaticHost() && url.startsWith('/api/') && !url.startsWith('/api/oxapay/')) {
+  // Let real Vercel Serverless Functions (/api/oxapay/*, /api/news/*, /api/ipfs/*) hit the backend directly
+  const isRealServerless =
+    url.startsWith('/api/oxapay/') || url.startsWith('/api/news/') || url.startsWith('/api/ipfs/');
+  if (isVercelStaticHost() && url.startsWith('/api/') && !isRealServerless) {
     return handleVercelApiRequest<T>(url, options);
   }
 
@@ -51,4 +53,14 @@ export function formatPrice(price: number): string {
   if (price >= 10) return formatCurrency(price, 2);
   if (price >= 1) return formatCurrency(price, 4);
   return formatCurrency(price, 4);
+}
+
+export function resolveIpfsUrl(url?: string): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('ipfs://')) {
+    const cid = trimmed.slice('ipfs://'.length).replace(/^ipfs\//, '');
+    return `https://gateway.pinata.cloud/ipfs/${cid}`;
+  }
+  return trimmed;
 }

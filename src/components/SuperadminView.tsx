@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Plus, Check, X, Download, RotateCcw, Percent, Megaphone, Gift, Calendar, Trash2, Users, Wallet, Search, RefreshCw } from 'lucide-react';
-import { apiFetch, formatCurrency, formatPrice, getStoredToken } from '../api';
+import { ShieldCheck, Plus, Check, X, Download, RotateCcw, Percent, Megaphone, Gift, Calendar, Trash2, Users, Wallet, Search, RefreshCw, Upload, Sparkles } from 'lucide-react';
+import { apiFetch, formatCurrency, formatPrice, getStoredToken, resolveIpfsUrl } from '../api';
 import {
   adminAdjustUserBalance,
   adminFetchAllUsersAndTxs,
@@ -14,9 +14,11 @@ import {
 } from '../supabase';
 import {
   AdminFutureEvent,
+  AdminMissionTask,
   AdminPlatformFees,
   AdminPromoBanner,
   Market,
+  MissionPlatform,
   NavSection,
   QuickTradeItem,
   UserRole,
@@ -85,6 +87,7 @@ interface AdminOverview {
     fees?: AdminPlatformFees;
     promo_banners?: AdminPromoBanner[];
     future_events?: AdminFutureEvent[];
+    missions?: AdminMissionTask[];
   };
   stats: {
     totalUsers: number;
@@ -154,6 +157,43 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
   const [evtStart, setEvtStart] = useState('2026-12-01');
   const [evtEnd, setEvtEnd] = useState('2026-12-31');
   const [evtDesc, setEvtDesc] = useState('');
+  const [ipfsUploading, setIpfsUploading] = useState(false);
+  const [misPlatform, setMisPlatform] = useState<MissionPlatform>('TIKTOK');
+  const [misTitle, setMisTitle] = useState('');
+  const [misDesc, setMisDesc] = useState('');
+  const [misReward, setMisReward] = useState('15');
+  const [misUrl, setMisUrl] = useState('');
+  const [misRequiresProof, setMisRequiresProof] = useState(true);
+  const [misBannerImg, setMisBannerImg] = useState('/og-ref-40usdt.jpg');
+
+  async function handleIpfsUploadFile(file: File, onDone: (url: string, cid?: string) => void) {
+    setIpfsUploading(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+        reader.readAsDataURL(file);
+      });
+      const res = await apiFetch<{ cid?: string; ipfsUri?: string; gatewayUrl: string; note?: string }>(
+        '/api/ipfs/upload',
+        {
+          method: 'POST',
+          body: JSON.stringify({ fileName: file.name, mimeType: file.type, dataBase64: dataUrl }),
+        }
+      );
+      onDone(res.ipfsUri || res.gatewayUrl, res.cid);
+      setFeedback(
+        res.cid
+          ? `Imagen subida a IPFS (CID: ${res.cid}).`
+          : res.note || 'Imagen cargada correctamente en el banner.'
+      );
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : 'Error subiendo imagen a IPFS');
+    } finally {
+      setIpfsUploading(false);
+    }
+  }
   const [qtEnvFilter, setQtEnvFilter] = useState<'ALL' | 'DEMO' | 'REAL'>('ALL');
   const [qtAdminData, setQtAdminData] = useState<AdminQuickTradesData | null>(null);
   const [newPair, setNewPair] = useState('');
@@ -1109,8 +1149,8 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                           <td className="py-2.5 px-3">
                             <span
                               className={`rounded px-2 py-0.5 text-[10px] font-bold ${u.role === 'SUPERADMIN'
-                                  ? 'bg-amber-500/20 text-amber-300'
-                                  : 'bg-white/10 text-slate-300'
+                                ? 'bg-amber-500/20 text-amber-300'
+                                : 'bg-white/10 text-slate-300'
                                 }`}
                             >
                               {u.role}
@@ -1263,10 +1303,10 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                       <td className="py-2.5 px-3">
                         <span
                           className={`rounded px-2 py-0.5 text-[10px] font-bold ${tx.status === 'COMPLETED'
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : tx.status === 'REJECTED'
-                                ? 'bg-red-500/20 text-red-300'
-                                : 'bg-amber-500/20 text-amber-300'
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : tx.status === 'REJECTED'
+                              ? 'bg-red-500/20 text-red-300'
+                              : 'bg-amber-500/20 text-amber-300'
                             }`}
                         >
                           {tx.status}
@@ -1560,7 +1600,39 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                 <option value="/banner-bots.jpg">Arte: Bots IA</option>
                 <option value="/banner-wallet.jpg">Arte: Wallet Vault</option>
                 <option value="/banner-launchpad.jpg">Arte: Launchpad</option>
+                <option value={bannerImage}>{bannerImage.startsWith('ipfs://') || bannerImage.startsWith('http') || bannerImage.startsWith('data:') ? 'Imagen IPFS / Subida' : 'Personalizada'}</option>
               </select>
+            </div>
+
+            {/* IPFS Image Uploader / CID Input for Banner */}
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-cyan-500/25 bg-[#090B10] p-3 text-xs">
+              <label className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400/40 px-3 py-1.5 font-semibold text-cyan-200 hover:bg-cyan-500/30 cursor-pointer shrink-0">
+                <Upload className="h-3.5 w-3.5" />
+                <span>{ipfsUploading ? 'Subiendo a IPFS...' : 'Subir Imagen a IPFS'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleIpfsUploadFile(f, (url) => setBannerImage(url));
+                  }}
+                />
+              </label>
+              <input
+                type="text"
+                value={bannerImage}
+                onChange={(e) => setBannerImage(e.target.value)}
+                placeholder="O pega un enlace ipfs://CID o URL de imagen..."
+                className="flex-1 min-w-44 rounded-lg border border-white/10 bg-[#111520] px-3 py-1.5 font-mono text-[11px] text-slate-200"
+              />
+              {bannerImage && (
+                <img
+                  src={resolveIpfsUrl(bannerImage)}
+                  alt="Preview IPFS"
+                  className="h-9 w-16 rounded-md object-cover border border-white/15 shrink-0"
+                />
+              )}
             </div>
             <button
               type="button"
@@ -1598,7 +1670,7 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                   className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#090B10] p-3 text-xs"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <img src={b.imageUrl} alt={b.title} className="h-12 w-20 rounded-lg object-cover shrink-0" />
+                    <img src={resolveIpfsUrl(b.imageUrl)} alt={b.title} className="h-12 w-20 rounded-lg object-cover shrink-0" />
                     <div className="min-w-0">
                       <div className="font-bold text-white truncate">{b.title}</div>
                       <div className="text-[10px] text-slate-400 truncate">{b.badge} · Destino: {b.targetTab}</div>
@@ -1713,6 +1785,158 @@ export function SuperadminView({ userRole, onNavigateTokenFactory, onBootstrapRe
                       updateConfig(
                         'future_events',
                         (data.configs.future_events || []).filter((x) => x.id !== ev.id)
+                      )
+                    }
+                    className="text-red-400 hover:text-red-300 cursor-pointer shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* 4. Configurable Missions & Crypto Rewards (TG, YT, X, IG, TikTok, Referrals) */}
+          <div className="rounded-xl border border-amber-500/25 bg-[#111520] p-5 space-y-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-amber-300">
+              <Sparkles className="h-4 w-4" />
+              <span>Misiones, Redes Sociales & Campañas Cripto (TG, YT, X, IG, TikTok + IPFS)</span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Crea tareas como "Crea un TikTok de Pukun Trade y gana $15 USDT" o visitas a tus redes oficiales. Los usuarios las ven y reclaman en Referidos & Misiones.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <select
+                value={misPlatform}
+                onChange={(e) => setMisPlatform(e.target.value as MissionPlatform)}
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              >
+                <option value="TIKTOK">TikTok (Crear Video)</option>
+                <option value="TELEGRAM">Telegram (Visitar / Unirse)</option>
+                <option value="YOUTUBE">YouTube (Suscribirse / Video)</option>
+                <option value="X">X / Twitter (Seguir / Repost)</option>
+                <option value="INSTAGRAM">Instagram (Seguir / Historia)</option>
+                <option value="REFERRAL">Campaña Referidos</option>
+                <option value="CUSTOM">Misión Personalizada</option>
+              </select>
+              <input
+                type="text"
+                value={misTitle}
+                onChange={(e) => setMisTitle(e.target.value)}
+                placeholder="Ej. Crea un TikTok de Pukun Trade y gana $15"
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+              <input
+                type="number"
+                step="0.5"
+                value={misReward}
+                onChange={(e) => setMisReward(e.target.value)}
+                placeholder="Premio en USDT"
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 font-mono text-white"
+              />
+              <input
+                type="text"
+                value={misDesc}
+                onChange={(e) => setMisDesc(e.target.value)}
+                placeholder="Instrucciones (incluye mencionar tu link referido)..."
+                className="sm:col-span-2 rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+              <input
+                type="url"
+                value={misUrl}
+                onChange={(e) => setMisUrl(e.target.value)}
+                placeholder="URL red social (https://...)"
+                className="rounded-lg border border-white/10 bg-[#090B10] px-3 py-2 text-white"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#090B10] p-3 text-xs">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/20 border border-amber-400/40 px-3 py-1.5 font-semibold text-amber-200 hover:bg-amber-500/30 cursor-pointer">
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>{ipfsUploading ? 'Subiendo...' : 'Subir Imagen Campaña a IPFS'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleIpfsUploadFile(f, (url) => setMisBannerImg(url));
+                    }}
+                  />
+                </label>
+                <label className="inline-flex items-center gap-2 text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={misRequiresProof}
+                    onChange={(e) => setMisRequiresProof(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span>Exigir enlace de prueba (ej. link del TikTok)</span>
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!misTitle.trim()) return;
+                  const current = data.configs.missions || [];
+                  const next: AdminMissionTask[] = [
+                    {
+                      id: `mis_${Date.now()}`,
+                      platform: misPlatform,
+                      title: misTitle,
+                      description: misDesc || 'Completa esta misión con tu código de referido Pukun Trade.',
+                      rewardUsdt: Number(misReward || 5),
+                      rewardAsset: 'USDT',
+                      actionUrl: misUrl,
+                      requiresProof: misRequiresProof,
+                      bannerImageUrl: misBannerImg,
+                      active: true,
+                      createdAt: Date.now(),
+                    },
+                    ...current,
+                  ];
+                  updateConfig('missions', next);
+                  setMisTitle('');
+                  setMisDesc('');
+                  setMisUrl('');
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Publicar Misión Cripto</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {(data.configs.missions || []).map((m) => (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#090B10] p-3 text-xs"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {m.bannerImageUrl && (
+                      <img
+                        src={resolveIpfsUrl(m.bannerImageUrl)}
+                        alt={m.title}
+                        className="h-11 w-16 rounded-lg object-cover shrink-0 border border-white/10"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-[9px] font-bold text-cyan-300">
+                          {m.platform}
+                        </span>
+                        <span className="font-mono font-bold text-emerald-400">+${m.rewardUsdt} {m.rewardAsset}</span>
+                      </div>
+                      <div className="font-semibold text-white truncate mt-0.5">{m.title}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateConfig(
+                        'missions',
+                        (data.configs.missions || []).filter((x) => x.id !== m.id)
                       )
                     }
                     className="text-red-400 hover:text-red-300 cursor-pointer shrink-0"
